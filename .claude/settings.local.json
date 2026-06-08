@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(& \"d:\\\\SkinIntelli\\\\backend\\\\.venv\\\\Scripts\\\\pip.exe\" list)"
+    ]
+  }
+}

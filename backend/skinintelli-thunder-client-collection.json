@@ -1,0 +1,199 @@
+{
+  "version": "1.1.0",
+  "name": "SkinIntel Backend",
+  "requests": [
+    {
+      "_id": "req-health",
+      "name": "Health Check",
+      "url": "{{baseUrl}}/",
+      "method": "GET",
+      "headers": [],
+      "body": {
+        "type": "none",
+        "raw": ""
+      }
+    },
+    {
+      "_id": "req-register",
+      "name": "Register",
+      "url": "{{baseUrl}}/api/auth/register",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "full_name": "Test User",
+          "email": "test@example.com",
+          "password": "TestPass123"
+        }
+      }
+    },
+    {
+      "_id": "req-verify-email",
+      "name": "Verify Email",
+      "url": "{{baseUrl}}/api/auth/verify-email",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "email": "test@example.com",
+          "otp": "123456"
+        }
+      }
+    },
+    {
+      "_id": "req-login",
+      "name": "Login",
+      "url": "{{baseUrl}}/api/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "email": "test@example.com",
+          "password": "TestPass123"
+        }
+      }
+    },
+    {
+      "_id": "req-get-profile",
+      "name": "Get Profile",
+      "url": "{{baseUrl}}/api/user/profile",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        }
+      ],
+      "body": {
+        "type": "none",
+        "raw": ""
+      }
+    },
+    {
+      "_id": "req-update-profile",
+      "name": "Update Profile",
+      "url": "{{baseUrl}}/api/user/profile",
+      "method": "PUT",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "full_name": "Test User Updated",
+          "username": "testuser",
+          "gender": "Other"
+        }
+      }
+    },
+    {
+      "_id": "req-questionnaire",
+      "name": "Update Questionnaire",
+      "url": "{{baseUrl}}/api/user/questionnaire",
+      "method": "PUT",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "skin_type": "Oily",
+          "skin_concerns": ["Acne"],
+          "allergies": "None",
+          "environment": "Polluted Area",
+          "goals": ["Reduce breakouts"]
+        }
+      }
+    },
+    {
+      "_id": "req-create-skin-profile",
+      "name": "Create Skin Profile",
+      "url": "{{baseUrl}}/api/skin-profile",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "skin_type": "Oily",
+          "skin_concerns": ["Acne"],
+          "allergies": "None",
+          "environment": "Polluted Area",
+          "goals": ["Reduce breakouts"]
+        }
+      }
+    },
+    {
+      "_id": "req-get-latest-skin-profile",
+      "name": "Get Latest Skin Profile",
+      "url": "{{baseUrl}}/api/skin-profile",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        }
+      ],
+      "body": {
+        "type": "none",
+        "raw": ""
+      }
+    },
+    {
+      "_id": "req-get-skin-history",
+      "name": "Get Skin Profile History",
+      "url": "{{baseUrl}}/api/skin-profile/history",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer {{access_token}}"
+        }
+      ],
+      "body": {
+        "type": "none",
+        "raw": ""
+      }
+    }
+  ]
+}

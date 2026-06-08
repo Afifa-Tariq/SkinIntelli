@@ -1,0 +1,11 @@
+flask
+flask-jwt-extended
+flask-sqlalchemy
+flask-bcrypt
+flask-mail
+flask-cors
+flask-marshmallow
+marshmallow-sqlalchemy
+flask-limiter
+python-dotenv
+PyMySQL
