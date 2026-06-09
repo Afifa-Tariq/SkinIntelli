@@ -96,14 +96,16 @@ extension ScreenHelpers on _SkinIntelAppState {
   Widget _routineItem(
     String title,
     String subtitle,
+    IconData icon,
     Color iconColor,
     Color badgeColor,
   ) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.7 * 255).round()),
+        color: AppTheme.card,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Row(
         children: [
@@ -114,7 +116,7 @@ extension ScreenHelpers on _SkinIntelAppState {
               color: iconColor.withAlpha((0.16 * 255).round()),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(Icons.circle, color: iconColor, size: 18),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -128,6 +130,7 @@ extension ScreenHelpers on _SkinIntelAppState {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: GoogleFonts.poppins(
@@ -142,7 +145,7 @@ extension ScreenHelpers on _SkinIntelAppState {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: badgeColor.withAlpha((0.12 * 255).round()),
+              color: badgeColor.withAlpha((0.16 * 255).round()),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(

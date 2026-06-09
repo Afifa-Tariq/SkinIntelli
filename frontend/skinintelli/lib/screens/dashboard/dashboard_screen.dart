@@ -244,7 +244,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: AppTheme.card,
                     borderRadius: BorderRadius.circular(24),
@@ -253,17 +253,57 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Today\'s Routine',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Today\'s Routine',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'April 14, 2026',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppTheme.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed:
+                                () => setState(
+                                  () => currentScreen = Screen.schedule,
+                                ),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(50, 28),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'View Full Schedule',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.accent,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 18),
                       _routineItem(
                         'Morning',
                         'Cleanser + Vitamin C',
+                        Icons.wb_sunny,
                         const Color(0xFFFFA500),
                         AppTheme.primary,
                       ),
@@ -271,6 +311,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                       _routineItem(
                         'Night',
                         'Moisturizer + Retinol',
+                        Icons.nightlight_round,
                         const Color(0xFF4F46E5),
                         AppTheme.primary,
                       ),
@@ -384,7 +425,10 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                           Icons.schedule,
                           'My Schedule',
                           false,
-                          () {},
+                          () => setState(() {
+                            currentScreen = Screen.schedule;
+                            menuOpen = false;
+                          }),
                         ),
                         const SizedBox(height: 10),
                         _drawerItem(Icons.grass, 'Ingredients', false, () {}),
@@ -401,7 +445,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                           'Recommendations',
                           false,
                           () => setState(() {
-                            currentScreen = Screen.profile;
+                            currentScreen = Screen.skinProfile;
                             menuOpen = false;
                           }),
                         ),
@@ -456,6 +500,85 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                 ),
               ),
             ),
+          // Bottom Navigation Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 70,
+              decoration: BoxDecoration(
+                color: AppTheme.card,
+                border: Border(top: BorderSide(color: AppTheme.border)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withAlpha((0.05 * 255).round()),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _bottomNavItem(
+                    Icons.dashboard,
+                    'Dashboard',
+                    currentScreen == Screen.dashboard,
+                    () => setState(() => currentScreen = Screen.dashboard),
+                  ),
+                  _bottomNavItem(
+                    Icons.schedule,
+                    'Schedule',
+                    currentScreen == Screen.schedule,
+                    () => setState(() => currentScreen = Screen.schedule),
+                  ),
+                  _bottomNavItem(
+                    Icons.person,
+                    'Profile',
+                    currentScreen == Screen.profile,
+                    () => setState(() => currentScreen = Screen.profile),
+                  ),
+                  _bottomNavItem(
+                    Icons.settings,
+                    'Settings',
+                    currentScreen == Screen.skinProfile,
+                    () => setState(() => currentScreen = Screen.skinProfile),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bottomNavItem(
+    IconData icon,
+    String label,
+    bool isActive,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? AppTheme.accent : AppTheme.mutedForeground,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              color: isActive ? AppTheme.accent : AppTheme.mutedForeground,
+            ),
+          ),
         ],
       ),
     );

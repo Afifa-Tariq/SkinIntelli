@@ -21,6 +21,8 @@ part 'screens/onboarding/success_screen.dart';
 part 'screens/onboarding/questionnaire_screens.dart';
 part 'screens/dashboard/dashboard_screen.dart';
 part 'screens/dashboard/profile_screen.dart';
+part 'screens/dashboard/schedule_screen.dart';
+part 'screens/dashboard/skin_profile_screen.dart';
 part 'screens/screen_helpers.dart';
 
 void main() {
@@ -47,6 +49,8 @@ enum Screen {
   resetSuccess,
   dashboard,
   profile,
+  schedule,
+  skinProfile,
 }
 
 class SkinIntelApp extends StatefulWidget {
@@ -106,6 +110,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
 
   String registeredEmail = '';
   String _resetToken = '';
+  String _selectedScheduleDay = 'Monday';
 
   @override
   void initState() {
@@ -233,7 +238,6 @@ class _SkinIntelAppState extends State<SkinIntelApp>
     _setLoading(false);
 
     final statusCode = response['statusCode'] as int;
-    final body = response['body'];
     if (statusCode == 201) {
       final body201 = response['body'];
       if (body201 is Map) {
@@ -564,6 +568,10 @@ class _SkinIntelAppState extends State<SkinIntelApp>
         return _dashboardScreen();
       case Screen.profile:
         return _profileScreen();
+      case Screen.schedule:
+        return _scheduleScreen();
+      case Screen.skinProfile:
+        return _skinProfileScreen();
     }
   }
 }
