@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../utils/constants.dart';
@@ -24,12 +27,31 @@ class ApiService {
     Future<http.Response> Function() request,
   ) async {
     try {
-      final response = await request();
+      final response = await request().timeout(const Duration(seconds: 10));
       return _normalizeResponse(response);
-    } catch (_) {
+    } on SocketException catch (e) {
+      debugPrint('ApiService error: $e');
       return {
         'statusCode': 0,
-        'body': {'message': 'Network error. Check your connection.'},
+        'body': {
+          'message':
+              'Cannot reach the server. Make sure the backend is running.',
+        },
+      };
+    } on TimeoutException catch (e) {
+      debugPrint('ApiService error: $e');
+      return {
+        'statusCode': 0,
+        'body': {
+          'message':
+              'Request timed out. The server may be slow or unreachable.',
+        },
+      };
+    } catch (e) {
+      debugPrint('ApiService error: $e');
+      return {
+        'statusCode': 0,
+        'body': {'message': 'Unexpected error. Please try again.'},
       };
     }
   }
@@ -38,23 +60,19 @@ class ApiService {
     String fullName,
     String email,
     String password,
-  ) =>
-      _safeRequest(
-        () => http.post(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/auth/register'),
-          headers: defaultHeaders,
-          body: jsonEncode({
-            'full_name': fullName,
-            'email': email,
-            'password': password,
-          }),
-        ),
-      );
+  ) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/auth/register'),
+      headers: defaultHeaders,
+      body: jsonEncode({
+        'full_name': fullName,
+        'email': email,
+        'password': password,
+      }),
+    ),
+  );
 
-  static Future<Map<String, dynamic>> verifyEmail(
-    String email,
-    String otp,
-  ) =>
+  static Future<Map<String, dynamic>> verifyEmail(String email, String otp) =>
       _safeRequest(
         () => http.post(
           Uri.parse('${AppTheme.backendBaseUrl}/api/auth/verify-email'),
@@ -63,19 +81,15 @@ class ApiService {
         ),
       );
 
-  static Future<Map<String, dynamic>> resendOtp(String email) =>
-      _safeRequest(
-        () => http.post(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/auth/resend-otp'),
-          headers: defaultHeaders,
-          body: jsonEncode({'email': email}),
-        ),
-      );
+  static Future<Map<String, dynamic>> resendOtp(String email) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/auth/resend-otp'),
+      headers: defaultHeaders,
+      body: jsonEncode({'email': email}),
+    ),
+  );
 
-  static Future<Map<String, dynamic>> login(
-    String email,
-    String password,
-  ) =>
+  static Future<Map<String, dynamic>> login(String email, String password) =>
       _safeRequest(
         () => http.post(
           Uri.parse('${AppTheme.backendBaseUrl}/api/auth/login'),
@@ -84,30 +98,28 @@ class ApiService {
         ),
       );
 
-  static Future<Map<String, dynamic>> getProfile() =>
-      _safeRequest(
-        () => http.get(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/user/profile'),
-          headers: authHeaders,
-        ),
-      );
+  static Future<Map<String, dynamic>> getProfile() => _safeRequest(
+    () => http.get(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/user/profile'),
+      headers: authHeaders,
+    ),
+  );
 
   static Future<Map<String, dynamic>> updateProfile({
     String? fullName,
     String? username,
     String? gender,
-  }) =>
-      _safeRequest(
-        () => http.put(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/user/profile'),
-          headers: authHeaders,
-          body: jsonEncode({
-            if (fullName != null) 'full_name': fullName,
-            if (username != null) 'username': username,
-            if (gender != null) 'gender': gender,
-          }),
-        ),
-      );
+  }) => _safeRequest(
+    () => http.put(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/user/profile'),
+      headers: authHeaders,
+      body: jsonEncode({
+        if (fullName != null) 'full_name': fullName,
+        if (username != null) 'username': username,
+        if (gender != null) 'gender': gender,
+      }),
+    ),
+  );
 
   static Future<Map<String, dynamic>> updateQuestionnaire({
     required String skinType,
@@ -115,20 +127,19 @@ class ApiService {
     required String allergies,
     required String environment,
     required List<String> goals,
-  }) =>
-      _safeRequest(
-        () => http.put(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/user/questionnaire'),
-          headers: authHeaders,
-          body: jsonEncode({
-            'skin_type': skinType,
-            'skin_concerns': skinConcerns,
-            'allergies': allergies,
-            'environment': environment,
-            'goals': goals,
-          }),
-        ),
-      );
+  }) => _safeRequest(
+    () => http.put(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/user/questionnaire'),
+      headers: authHeaders,
+      body: jsonEncode({
+        'skin_type': skinType,
+        'skin_concerns': skinConcerns,
+        'allergies': allergies,
+        'environment': environment,
+        'goals': goals,
+      }),
+    ),
+  );
 
   static Future<Map<String, dynamic>> forgotPassword(String email) =>
       _safeRequest(
@@ -142,29 +153,27 @@ class ApiService {
   static Future<Map<String, dynamic>> verifyResetOtp(
     String email,
     String otp,
-  ) =>
-      _safeRequest(
-        () => http.post(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/auth/verify-reset-otp'),
-          headers: defaultHeaders,
-          body: jsonEncode({'email': email, 'otp': otp}),
-        ),
-      );
+  ) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/auth/verify-reset-otp'),
+      headers: defaultHeaders,
+      body: jsonEncode({'email': email, 'otp': otp}),
+    ),
+  );
 
   static Future<Map<String, dynamic>> resetPassword(
     String resetToken,
     String newPassword,
-  ) =>
-      _safeRequest(
-        () => http.post(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/auth/reset-password'),
-          headers: defaultHeaders,
-          body: jsonEncode({
-            'reset_token': resetToken,
-            'new_password': newPassword,
-          }),
-        ),
-      );
+  ) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/auth/reset-password'),
+      headers: defaultHeaders,
+      body: jsonEncode({
+        'reset_token': resetToken,
+        'new_password': newPassword,
+      }),
+    ),
+  );
 
   static Future<Map<String, dynamic>> createSkinProfile({
     required String skinType,
@@ -172,20 +181,19 @@ class ApiService {
     required String allergies,
     required String environment,
     required List<String> goals,
-  }) =>
-      _safeRequest(
-        () => http.post(
-          Uri.parse('${AppTheme.backendBaseUrl}/api/skin-profile'),
-          headers: authHeaders,
-          body: jsonEncode({
-            'skin_type': skinType,
-            'skin_concerns': skinConcerns,
-            'allergies': allergies,
-            'environment': environment,
-            'goals': goals,
-          }),
-        ),
-      );
+  }) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/skin-profile'),
+      headers: authHeaders,
+      body: jsonEncode({
+        'skin_type': skinType,
+        'skin_concerns': skinConcerns,
+        'allergies': allergies,
+        'environment': environment,
+        'goals': goals,
+      }),
+    ),
+  );
 
   static Map<String, dynamic> _normalizeResponse(http.Response response) {
     dynamic body;

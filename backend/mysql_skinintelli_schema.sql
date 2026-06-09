@@ -1,7 +1,6 @@
 -- SkinIntelli MySQL Database Schema
 -- Complete schema with all tables, relationships, and constraints
 
--- Create Database
 CREATE DATABASE IF NOT EXISTS Skinintelli;
 USE Skinintelli;
 
@@ -56,7 +55,8 @@ CREATE TABLE IF NOT EXISTS skin_profiles (
     
     INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at),
-    INDEX idx_is_active (is_active)
+    INDEX idx_is_active (is_active),
+    INDEX idx_user_active (user_id, is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS skin_concerns (
     
     UNIQUE KEY uk_profile_concern (profile_id, concern_name),
     INDEX idx_profile_id (profile_id),
-    INDEX idx_concern_name (concern_name)
+    INDEX idx_concern_name (concern_name),
+    INDEX idx_profile_concern_composite (profile_id, concern_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -100,6 +101,7 @@ CREATE TABLE IF NOT EXISTS ingredients (
     INDEX idx_inci_name (inci_name),
     INDEX idx_common_name (common_name),
     INDEX idx_category (category),
+    INDEX idx_safety_comedogenic (base_safety_score, comedogenic_score),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -174,8 +176,10 @@ CREATE TABLE IF NOT EXISTS ingredient_rules (
     CONSTRAINT fk_ingredient_rules_ingredient FOREIGN KEY (ingredient_id) 
         REFERENCES ingredients(ingredient_id) ON DELETE CASCADE,
     
+    UNIQUE KEY uk_rule_unique (ingredient_id, condition_type, condition_value),
     INDEX idx_ingredient_id (ingredient_id),
-    INDEX idx_condition_type (condition_type),
+    INDEX idx_ingredient_effect (ingredient_id, effect),
+    INDEX idx_irules_condition (condition_type, condition_value),
     INDEX idx_effect (effect),
     INDEX idx_priority (priority),
     INDEX idx_created_at (created_at)
@@ -197,7 +201,7 @@ CREATE TABLE IF NOT EXISTS ingredient_conflicts (
         REFERENCES ingredients(ingredient_id),
     CONSTRAINT fk_ingredient_conflicts_b FOREIGN KEY (ingredient_b_id) 
         REFERENCES ingredients(ingredient_id),
-    CONSTRAINT chk_different_ingredients CHECK (ingredient_a_id != ingredient_b_id),
+    CONSTRAINT chk_conflict_order CHECK (ingredient_a_id < ingredient_b_id),
     
     UNIQUE KEY uk_conflict_pair (ingredient_a_id, ingredient_b_id),
     INDEX idx_ingredient_a_id (ingredient_a_id),
@@ -247,7 +251,8 @@ CREATE TABLE IF NOT EXISTS product_ingredients (
     UNIQUE KEY uk_product_ingredient (product_id, ingredient_id),
     INDEX idx_product_id (product_id),
     INDEX idx_ingredient_id (ingredient_id),
-    INDEX idx_position (position)
+    INDEX idx_position (position),
+    INDEX idx_concentration (concentration)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -266,7 +271,8 @@ CREATE TABLE IF NOT EXISTS routines (
     
     INDEX idx_user_id (user_id),
     INDEX idx_is_active (is_active),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_routine_user_active (user_id, is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -340,7 +346,8 @@ CREATE TABLE IF NOT EXISTS recommendation_products (
     INDEX idx_product_id (product_id),
     INDEX idx_final_score (final_score),
     INDEX idx_is_blocked (is_blocked),
-    INDEX idx_rank (`rank`)
+    INDEX idx_rank (`rank`),
+    INDEX idx_recommendation_score_rank (record_id, final_score, `rank`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -370,19 +377,5 @@ CREATE TABLE IF NOT EXISTS feedback_entries (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================================================
--- Create additional indexes for common queries
--- ============================================================================
-ALTER TABLE skin_profiles ADD INDEX idx_user_active (user_id, is_active);
-ALTER TABLE skin_concerns ADD INDEX idx_profile_concern_composite (profile_id, concern_name);
-ALTER TABLE ingredients ADD INDEX idx_safety_comedogenic (base_safety_score, comedogenic_score);
-ALTER TABLE ingredient_rules ADD INDEX idx_ingredient_effect (ingredient_id, effect);
-ALTER TABLE ingredient_conflicts ADD INDEX idx_conflict_severity (ingredient_a_id, severity);
-ALTER TABLE product_ingredients ADD INDEX idx_concentration (concentration);
-ALTER TABLE routines ADD INDEX idx_routine_user_active (user_id, is_active);
-ALTER TABLE recommendation_products ADD INDEX idx_recommendation_score_rank (record_id, final_score, `rank`);
-
--- ============================================================================
--- Display confirmation
--- ============================================================================
-SELECT 'SkinIntelli Database Schema Created Successfully!' as status;
+-- Confirmation message
+SELECT 'SkinIntelli full schema created or verified.' AS status;

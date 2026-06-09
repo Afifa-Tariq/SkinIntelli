@@ -60,7 +60,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
     with TickerProviderStateMixin {
   Screen currentScreen = Screen.splash;
 
-  bool agreeTerms = true;
+  bool agreeTerms = false;
   int passwordStrength = 0;
   bool showPassword = false;
   bool showConfirmPassword = false;
@@ -248,13 +248,14 @@ class _SkinIntelAppState extends State<SkinIntelApp>
           body is Map && body['message'] != null
               ? body['message'].toString()
               : '';
-      final message = raw == 'EMAIL_EXISTS'
-          ? 'An account with this email already exists. Please log in.'
-          : raw == 'MISSING_FIELDS'
-          ? 'Please fill in all fields.'
-          : raw.isNotEmpty
-          ? raw
-          : 'Signup failed. Please try again.';
+      final message =
+          raw == 'EMAIL_EXISTS'
+              ? 'An account with this email already exists. Please log in.'
+              : raw == 'MISSING_FIELDS'
+              ? 'Please fill in all fields.'
+              : raw.isNotEmpty
+              ? raw
+              : 'Signup failed. Please try again.';
       _showMessage(message, isError: true);
     }
   }

@@ -1,7 +1,10 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, jsonify
 
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path)
+
+from flask import Flask, jsonify
 from auth import auth_bp
 from config import DevelopmentConfig, ProductionConfig
 from extensions import bcrypt, cors, db, jwt, limiter, mail

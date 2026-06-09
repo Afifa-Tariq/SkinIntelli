@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -22,10 +22,21 @@ class AppTheme {
   static const Color background = AppColors.backgroundColor;
   static const Color card = AppColors.card;
 
+  static const String devMachineIp = '192.168.1.x';
+
   static String get backendBaseUrl {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (!kIsWeb &&
+        kDebugMode &&
+        defaultTargetPlatform == TargetPlatform.android) {
+      if (devMachineIp != '192.168.1.x') {
+        return 'http://$devMachineIp:5000';
+      }
       return 'http://10.0.2.2:5000';
     }
+    if (!kIsWeb && kDebugMode && devMachineIp != '192.168.1.x') {
+      return 'http://$devMachineIp:5000';
+    }
+    // TODO: Replace with your PC's LAN IP when testing on a physical device
     return 'http://127.0.0.1:5000';
   }
 
