@@ -201,6 +201,8 @@ class _SkinIntelAppState extends State<SkinIntelApp>
   }
 
   Future<void> _submitSignUp() async {
+    // On Web, Google Fonts can sometimes cause fetch errors.
+    // We ensure the UI doesn't crash if a font fails to load.
     if (isLoading) return;
     if (!agreeTerms) {
       _showMessage(
@@ -235,6 +237,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
     if (statusCode == 201) {
       final body201 = response['body'];
       if (body201 is Map) {
+        registeredEmail = email;
         ApiService.accessToken = body201['access_token']?.toString() ?? '';
         ApiService.refreshToken = body201['refresh_token']?.toString() ?? '';
         _loadUserProfile(body201['user']);
@@ -244,6 +247,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
       _showMessage('Account created successfully.');
       setState(() => currentScreen = Screen.profileSetup);
     } else {
+      final body = response['body'];
       final raw =
           body is Map && body['message'] != null
               ? body['message'].toString()
@@ -377,7 +381,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
 
     final statusCode = response['statusCode'] as int;
     if (statusCode == 200) {
-      ApiService.createSkinProfile(
+      await ApiService.createSkinProfile(
         skinType: qSkinType,
         skinConcerns: qSkinConcerns,
         allergies: qAllergies,

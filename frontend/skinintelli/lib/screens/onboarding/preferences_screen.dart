@@ -36,6 +36,7 @@ extension PreferencesScreenWidgets on _SkinIntelAppState {
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -45,6 +46,7 @@ extension PreferencesScreenWidgets on _SkinIntelAppState {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       color: AppTheme.mutedForeground,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -53,6 +55,7 @@ extension PreferencesScreenWidgets on _SkinIntelAppState {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                   const SizedBox(height: 16),

@@ -22,21 +22,26 @@ class AppTheme {
   static const Color background = AppColors.backgroundColor;
   static const Color card = AppColors.card;
 
-  static const String devMachineIp = '192.168.1.x';
+  // Update this value to your development machine's LAN IP when testing
+  // on a physical device, e.g. '192.168.1.42'.
+  static const String devMachineIp = '192.168.1.42';
 
   static String get backendBaseUrl {
-    if (!kIsWeb &&
-        kDebugMode &&
-        defaultTargetPlatform == TargetPlatform.android) {
+    if (kIsWeb) return 'http://localhost:5000';
+
+    if (kDebugMode) {
       if (devMachineIp != '192.168.1.x') {
         return 'http://$devMachineIp:5000';
       }
-      return 'http://10.0.2.2:5000';
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        return 'http://10.0.2.2:5000';
+      }
+      debugPrint(
+        'WARNING: AppTheme.devMachineIp is still set to the placeholder "192.168.1.x". '
+        'On a physical device, 127.0.0.1 refers to the device itself, not your PC. '
+        'Set devMachineIp to your PC LAN IP to connect to the backend.',
+      );
     }
-    if (!kIsWeb && kDebugMode && devMachineIp != '192.168.1.x') {
-      return 'http://$devMachineIp:5000';
-    }
-    // TODO: Replace with your PC's LAN IP when testing on a physical device
     return 'http://127.0.0.1:5000';
   }
 

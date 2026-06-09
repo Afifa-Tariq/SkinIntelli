@@ -7,13 +7,10 @@ load_dotenv(dotenv_path)
 from flask import Flask, jsonify
 from auth import auth_bp
 from config import DevelopmentConfig, ProductionConfig
-from extensions import bcrypt, cors, db, jwt, limiter, mail
+from extensions import bcrypt, db, jwt, limiter, mail, cors
 from models import TokenBlocklist
 from skin_profile import skin_profile_bp
 from user import user_bp
-
-dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
-load_dotenv(dotenv_path)
 
 
 def create_app():
@@ -27,13 +24,7 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
-    cors.init_app(
-        app,
-        origins="*",
-        allow_headers=["Content-Type", "Authorization"],
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        supports_credentials=False,
-    )
+    cors.init_app(app)
     limiter.init_app(app)
 
     @jwt.token_in_blocklist_loader
@@ -57,4 +48,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)

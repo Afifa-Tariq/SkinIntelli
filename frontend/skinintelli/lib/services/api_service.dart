@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io'
+    if (dart.library.html) 'package:skinintelli/utils/io_stub.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -29,15 +30,6 @@ class ApiService {
     try {
       final response = await request().timeout(const Duration(seconds: 10));
       return _normalizeResponse(response);
-    } on SocketException catch (e) {
-      debugPrint('ApiService error: $e');
-      return {
-        'statusCode': 0,
-        'body': {
-          'message':
-              'Cannot reach the server. Make sure the backend is running.',
-        },
-      };
     } on TimeoutException catch (e) {
       debugPrint('ApiService error: $e');
       return {
@@ -47,11 +39,54 @@ class ApiService {
               'Request timed out. The server may be slow or unreachable.',
         },
       };
-    } catch (e) {
-      debugPrint('ApiService error: $e');
+    } on FormatException catch (e) {
+      debugPrint('ApiService FormatException: $e');
       return {
         'statusCode': 0,
-        'body': {'message': 'Unexpected error. Please try again.'},
+        'body': {
+          'message':
+              kDebugMode
+                  ? 'Debug: FormatException — ${e.toString()}'
+                  : 'Invalid response received from the server.',
+        },
+      };
+    } catch (e, s) {
+      // On native platforms, also catch SocketException here.
+      if (!kIsWeb && e is SocketException) {
+        debugPrint('ApiService SocketException: $e');
+        return {
+          'statusCode': 0,
+          'body': {
+            'message':
+                'Cannot reach the server. Make sure the backend is running.',
+          },
+        };
+      }
+
+      // ✅ FIX 2: Changed from 'TypeError: Failed to fetch'
+      // to just 'Failed to fetch' so it catches ALL web variants:
+      // - "TypeError: Failed to fetch"      (some browsers)
+      // - "ClientException: Failed to fetch" (Flutter Web / your exact error)
+      if (kIsWeb && e.toString().contains('Failed to fetch')) {
+        return {
+          'statusCode': 0,
+          'body': {
+            'message':
+                'Cannot reach the server. Make sure the backend is running and CORS is enabled.',
+          },
+        };
+      }
+
+      debugPrint('ApiService error: $e');
+      debugPrint('ApiService stackTrace: $s');
+      return {
+        'statusCode': 0,
+        'body': {
+          'message':
+              kDebugMode
+                  ? 'Connection Error (${e.runtimeType}): ${e.toString()}'
+                  : 'Unexpected error. Please try again.',
+        },
       };
     }
   }
@@ -200,7 +235,12 @@ class ApiService {
     try {
       body = jsonDecode(response.body);
     } catch (_) {
-      body = {'message': response.body};
+      body = {
+        'message':
+            response.statusCode >= 500
+                ? 'Server Error (${response.statusCode}): The database might be down.'
+                : response.body,
+      };
     }
     return {'statusCode': response.statusCode, 'body': body};
   }

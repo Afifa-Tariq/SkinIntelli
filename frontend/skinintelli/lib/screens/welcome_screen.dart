@@ -42,6 +42,7 @@ extension WelcomeScreenWidgets on _SkinIntelAppState {
                       style: GoogleFonts.poppins(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -51,6 +52,7 @@ extension WelcomeScreenWidgets on _SkinIntelAppState {
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         color: AppTheme.mutedForeground,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ],

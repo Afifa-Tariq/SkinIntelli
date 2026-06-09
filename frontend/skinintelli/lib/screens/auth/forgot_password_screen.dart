@@ -69,7 +69,11 @@ extension ForgotPasswordScreenWidgets on _SkinIntelAppState {
               ),
               child: const Text(
                 'Send Reset Code',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

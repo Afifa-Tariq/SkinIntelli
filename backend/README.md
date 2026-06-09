@@ -2,30 +2,47 @@
 
 ## Quick Start
 
-1. From `backend/`, copy `.env.example` to `.env` and fill in these values:
-   - `SECRET_KEY` = any random string
-   - `JWT_SECRET_KEY` = any random string
-   - `DATABASE_URL` = `mysql+pymysql://root:yourpassword@localhost:3306/Skinintelli`
-   - leave `MAIL_SERVER`, `MAIL_USERNAME`, and `MAIL_PASSWORD` empty for local development
+1. From `backend/`, ensure `.env` exists and is properly configured:
+   - Copy `.env.example` to `.env` if `.env` does not exist
+   - Fill in these required values:
+     - `SECRET_KEY` = any random string (for Flask session security)
+     - `JWT_SECRET_KEY` = any random string (for JWT token signing)
+     - `DATABASE_URL` = `mysql+pymysql://root:yourpassword@localhost:3306/Skinintelli` (adjust for your MySQL setup)
+     - `MAIL_SERVER`, `MAIL_USERNAME`, `MAIL_PASSWORD` = leave empty for local development, or configure Gmail SMTP
+
 2. Install dependencies:
    ```powershell
    pip install -r requirements.txt
    ```
-3. Run the backend:
+
+3. Create the database tables using the Flask app context:
+   ```powershell
+   python skinintelli_migrate.py
+   ```
+   This creates missing tables only — existing tables are not modified.
+
+4. Run the backend (Flask app runs on `0.0.0.0:5000` for web accessibility):
    ```powershell
    python main.py
    ```
    Or use the helper scripts on your platform:
    - Windows: `run.bat`
    - macOS/Linux: `run.sh`
-4. Confirm the API is running by opening:
+
+5. Confirm the API is running by opening:
    ```text
-   http://127.0.0.1:5000/
+   http://localhost:5000/
    ```
    You should see:
    ```json
    {"status": "SkinIntel API running"}
    ```
+
+## Web Build Configuration
+
+- The Flask server runs on `0.0.0.0:5000` by default, making it accessible from browser clients (Flutter Web) and mobile emulators.
+- **Important for Flutter Web & Physical Devices**: Update `devMachineIp` in `frontend/skinintelli/lib/utils/constants.dart` to your PC's LAN IP (e.g. `'192.168.1.42'`) when building and testing on a physical device.
+- CORS is configured to accept requests from any origin with `methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH']`.
 
 ## Setup
 

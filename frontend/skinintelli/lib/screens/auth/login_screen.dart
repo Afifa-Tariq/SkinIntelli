@@ -72,6 +72,7 @@ extension LoginScreenWidgets on _SkinIntelAppState {
             ElevatedButton(
               onPressed: isLoading ? null : _submitLogin,
               style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
                 backgroundColor: AppTheme.primary,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(
@@ -80,7 +81,11 @@ extension LoginScreenWidgets on _SkinIntelAppState {
               ),
               child: const Text(
                 'Login',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
             const SizedBox(height: 24),

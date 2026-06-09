@@ -134,7 +134,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: AppTheme.card,
                     borderRadius: BorderRadius.circular(24),
@@ -143,25 +143,59 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Skin Progress',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Skin Progress',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Your skin is improving',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppTheme.background,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            child: const Icon(
+                              Icons.trending_up,
+                              color: AppTheme.primary,
+                              size: 20,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 18),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           SizedBox(
-                            width: 100,
-                            height: 100,
+                            width: 120,
+                            height: 120,
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
                                 CircularProgressIndicator(
                                   value: 0.9,
-                                  strokeWidth: 9,
+                                  strokeWidth: 11,
                                   color: AppTheme.accent,
                                   backgroundColor: AppTheme.primary.withAlpha(
                                     (0.15 * 255).round(),
@@ -170,7 +204,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                                 Text(
                                   '90%',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 22,
+                                    fontSize: 26,
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.primary,
                                   ),
@@ -364,7 +398,27 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                         const SizedBox(height: 10),
                         _drawerItem(
                           Icons.settings,
+                          'Recommendations',
+                          false,
+                          () => setState(() {
+                            currentScreen = Screen.profile;
+                            menuOpen = false;
+                          }),
+                        ),
+                        const SizedBox(height: 10),
+                        _drawerItem(
+                          Icons.settings,
                           'Settings',
+                          false,
+                          () => setState(() {
+                            currentScreen = Screen.profile;
+                            menuOpen = false;
+                          }),
+                        ),
+                        const SizedBox(height: 10),
+                        _drawerItem(
+                          Icons.settings,
+                          'About',
                           false,
                           () => setState(() {
                             currentScreen = Screen.profile;
