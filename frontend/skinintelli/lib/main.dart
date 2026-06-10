@@ -23,6 +23,9 @@ part 'screens/dashboard/dashboard_screen.dart';
 part 'screens/dashboard/profile_screen.dart';
 part 'screens/dashboard/schedule_screen.dart';
 part 'screens/dashboard/skin_profile_screen.dart';
+part 'screens/dashboard/ingredients_screen.dart';
+part 'screens/dashboard/products_screen.dart';
+part 'screens/dashboard/about_screen.dart';
 part 'screens/screen_helpers.dart';
 
 void main() {
@@ -51,6 +54,9 @@ enum Screen {
   profile,
   schedule,
   skinProfile,
+  ingredients,
+  products,
+  about,
 }
 
 class SkinIntelApp extends StatefulWidget {
@@ -572,6 +578,12 @@ class _SkinIntelAppState extends State<SkinIntelApp>
         return _scheduleScreen();
       case Screen.skinProfile:
         return _skinProfileScreen();
+      case Screen.ingredients:
+        return _ingredientsScreen();
+      case Screen.products:
+        return _productsScreen();
+      case Screen.about:
+        return _aboutScreen();
     }
   }
 }

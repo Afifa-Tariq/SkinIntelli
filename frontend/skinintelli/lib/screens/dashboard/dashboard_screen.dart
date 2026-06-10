@@ -350,6 +350,15 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
               ],
             ),
           ),
+          if (menuOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => setState(() => menuOpen = false),
+                child: Container(
+                  color: Colors.black.withAlpha((0.35 * 255).round()),
+                ),
+              ),
+            ),
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             top: 0,
@@ -414,7 +423,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                         _drawerItem(
                           Icons.dashboard,
                           'Dashboard',
-                          true,
+                          currentScreen == Screen.dashboard,
                           () => setState(() {
                             currentScreen = Screen.dashboard;
                             menuOpen = false;
@@ -424,26 +433,37 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                         _drawerItem(
                           Icons.schedule,
                           'My Schedule',
-                          false,
+                          currentScreen == Screen.schedule,
                           () => setState(() {
                             currentScreen = Screen.schedule;
                             menuOpen = false;
                           }),
                         ),
                         const SizedBox(height: 10),
-                        _drawerItem(Icons.grass, 'Ingredients', false, () {}),
+                        _drawerItem(
+                          Icons.grass,
+                          'Ingredients',
+                          currentScreen == Screen.ingredients,
+                          () => setState(() {
+                            currentScreen = Screen.ingredients;
+                            menuOpen = false;
+                          }),
+                        ),
                         const SizedBox(height: 10),
                         _drawerItem(
                           Icons.inventory_2,
                           'Products',
-                          false,
-                          () {},
+                          currentScreen == Screen.products,
+                          () => setState(() {
+                            currentScreen = Screen.products;
+                            menuOpen = false;
+                          }),
                         ),
                         const SizedBox(height: 10),
                         _drawerItem(
                           Icons.settings,
                           'Recommendations',
-                          false,
+                          currentScreen == Screen.skinProfile,
                           () => setState(() {
                             currentScreen = Screen.skinProfile;
                             menuOpen = false;
@@ -453,7 +473,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                         _drawerItem(
                           Icons.settings,
                           'Settings',
-                          false,
+                          currentScreen == Screen.profile,
                           () => setState(() {
                             currentScreen = Screen.profile;
                             menuOpen = false;
@@ -461,11 +481,11 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                         ),
                         const SizedBox(height: 10),
                         _drawerItem(
-                          Icons.settings,
+                          Icons.info_outline,
                           'About',
-                          false,
+                          currentScreen == Screen.about,
                           () => setState(() {
-                            currentScreen = Screen.profile;
+                            currentScreen = Screen.about;
                             menuOpen = false;
                           }),
                         ),
@@ -489,94 +509,6 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                   ),
                 ),
               ),
-            ),
-          ),
-          if (menuOpen)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => setState(() => menuOpen = false),
-                child: Container(
-                  color: Colors.black.withAlpha((0.35 * 255).round()),
-                ),
-              ),
-            ),
-          // Bottom Navigation Bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 70,
-              decoration: BoxDecoration(
-                color: AppTheme.card,
-                border: Border(top: BorderSide(color: AppTheme.border)),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withAlpha((0.05 * 255).round()),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _bottomNavItem(
-                    Icons.dashboard,
-                    'Dashboard',
-                    currentScreen == Screen.dashboard,
-                    () => setState(() => currentScreen = Screen.dashboard),
-                  ),
-                  _bottomNavItem(
-                    Icons.schedule,
-                    'Schedule',
-                    currentScreen == Screen.schedule,
-                    () => setState(() => currentScreen = Screen.schedule),
-                  ),
-                  _bottomNavItem(
-                    Icons.person,
-                    'Profile',
-                    currentScreen == Screen.profile,
-                    () => setState(() => currentScreen = Screen.profile),
-                  ),
-                  _bottomNavItem(
-                    Icons.settings,
-                    'Settings',
-                    currentScreen == Screen.skinProfile,
-                    () => setState(() => currentScreen = Screen.skinProfile),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bottomNavItem(
-    IconData icon,
-    String label,
-    bool isActive,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? AppTheme.accent : AppTheme.mutedForeground,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? AppTheme.accent : AppTheme.mutedForeground,
             ),
           ),
         ],
