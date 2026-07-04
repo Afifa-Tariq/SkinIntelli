@@ -20,12 +20,12 @@ part 'screens/onboarding/preferences_screen.dart';
 part 'screens/onboarding/success_screen.dart';
 part 'screens/onboarding/questionnaire_screens.dart';
 part 'screens/dashboard/dashboard_screen.dart';
-part 'screens/dashboard/profile_screen.dart';
 part 'screens/dashboard/schedule_screen.dart';
 part 'screens/dashboard/skin_profile_screen.dart';
 part 'screens/dashboard/ingredients_screen.dart';
 part 'screens/dashboard/products_screen.dart';
 part 'screens/dashboard/about_screen.dart';
+part 'screens/dashboard/skin_profile.dart';
 part 'screens/screen_helpers.dart';
 
 void main() {
@@ -573,7 +573,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
       case Screen.dashboard:
         return _dashboardScreen();
       case Screen.profile:
-        return _profileScreen();
+        return _profileSetupScreen();
       case Screen.schedule:
         return _scheduleScreen();
       case Screen.skinProfile:

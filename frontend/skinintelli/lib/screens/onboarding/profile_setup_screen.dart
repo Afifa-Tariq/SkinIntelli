@@ -11,8 +11,7 @@ extension ProfileSetupScreenWidgets on _SkinIntelAppState {
             elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios, color: AppTheme.primary),
-              onPressed:
-                  () => setState(() => currentScreen = Screen.signup),
+              onPressed: () => setState(() => currentScreen = Screen.signup),
             ),
             title: stepIndicator(current: 1, total: 2),
             centerTitle: true,
@@ -68,7 +67,11 @@ extension ProfileSetupScreenWidgets on _SkinIntelAppState {
                     ),
                     child: const Text(
                       'Continue',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

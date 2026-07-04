@@ -24,7 +24,7 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
-    cors.init_app(app)
+    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
     limiter.init_app(app)
 
     @jwt.token_in_blocklist_loader
