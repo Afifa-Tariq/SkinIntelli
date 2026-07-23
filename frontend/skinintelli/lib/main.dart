@@ -113,6 +113,9 @@ class _SkinIntelAppState extends State<SkinIntelApp>
   bool menuOpen = false;
   bool qCompletionProcessing = false;
   bool qCompletionReady = false;
+  String qCompletionMessage = '';
+  List<Map<String, dynamic>> qCompletionProducts = [];
+  List<Map<String, dynamic>> qCompletionIngredients = [];
 
   String registeredEmail = '';
   String _resetToken = '';
@@ -155,21 +158,67 @@ class _SkinIntelAppState extends State<SkinIntelApp>
     });
   }
 
-  void _startQCompletionTimer() {
+  void _startQCompletionProcessing() {
     if (mounted) {
       setState(() {
         qCompletionProcessing = true;
         qCompletionReady = false;
+        qCompletionMessage = '';
+        qCompletionProducts = [];
+        qCompletionIngredients = [];
       });
     }
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          qCompletionProcessing = false;
-          qCompletionReady = true;
-        });
+  }
+
+  Future<Map<String, dynamic>> _loadDashboardRecommendations({
+    Map<String, dynamic>? filter,
+  }) async {
+    final response = await ApiService.getRecommendations(filter: filter);
+    if (response['statusCode'] == 200 && response['body'] is Map) {
+      final body = response['body'] as Map<String, dynamic>;
+      final rawProducts = body['products'];
+      final rawIngredients = body['ingredients'];
+      final products = <Map<String, dynamic>>[];
+      final ingredients = <Map<String, dynamic>>[];
+
+      if (rawProducts is List) {
+        for (final item in rawProducts) {
+          if (item is Map) {
+            products.add(Map<String, dynamic>.from(item));
+          }
+        }
       }
-    });
+
+      if (rawIngredients is List) {
+        for (final item in rawIngredients) {
+          if (item is Map) {
+            ingredients.add(Map<String, dynamic>.from(item));
+          }
+        }
+      }
+
+      return {
+        'products': products,
+        'ingredients': ingredients,
+        'message': null,
+      };
+    }
+
+    if ((response['statusCode'] ?? 0) == 404) {
+      return {
+        'products': <Map<String, dynamic>>[],
+        'ingredients': <Map<String, dynamic>>[],
+        'message':
+            'Complete your skin profile to see personalized recommendations.',
+      };
+    }
+
+    return {
+      'products': <Map<String, dynamic>>[],
+      'ingredients': <Map<String, dynamic>>[],
+      'message':
+          response['body']?['message'] ?? 'Unable to load recommendations.',
+    };
   }
 
   void calculatePasswordStrength(String pwd) {
@@ -379,8 +428,34 @@ class _SkinIntelAppState extends State<SkinIntelApp>
       _showMessage('Please complete all questionnaire steps.', isError: true);
       return;
     }
+
+    _startQCompletionProcessing();
     _setLoading(true);
-    final response = await ApiService.updateQuestionnaire(
+    final updateResponse = await ApiService.updateQuestionnaire(
+      skinType: qSkinType,
+      skinConcerns: qSkinConcerns,
+      allergies: qAllergies,
+      environment: qEnvironment,
+      goals: selectedGoals,
+    );
+
+    if (updateResponse['statusCode'] != 200) {
+      _setLoading(false);
+      final body = updateResponse['body'];
+      final message =
+          body is Map && body['message'] != null
+              ? body['message'].toString()
+              : 'Unable to save preferences.';
+      setState(() {
+        qCompletionProcessing = false;
+        qCompletionReady = false;
+        qCompletionMessage = message;
+      });
+      _showMessage(message, isError: true);
+      return;
+    }
+
+    final createResponse = await ApiService.createSkinProfile(
       skinType: qSkinType,
       skinConcerns: qSkinConcerns,
       allergies: qAllergies,
@@ -389,23 +464,53 @@ class _SkinIntelAppState extends State<SkinIntelApp>
     );
     _setLoading(false);
 
-    final statusCode = response['statusCode'] as int;
-    if (statusCode == 200) {
-      await ApiService.createSkinProfile(
-        skinType: qSkinType,
-        skinConcerns: qSkinConcerns,
-        allergies: qAllergies,
-        environment: qEnvironment,
-        goals: selectedGoals,
-      );
+    final statusCode = createResponse['statusCode'] as int;
+    if (statusCode == 201) {
+      final body = createResponse['body'];
+      final recommendations = body is Map ? body['recommendations'] : null;
+      if (recommendations is Map) {
+        final products = <Map<String, dynamic>>[];
+        final ingredients = <Map<String, dynamic>>[];
+        if (recommendations['products'] is List) {
+          for (final item in recommendations['products'] as List) {
+            if (item is Map) {
+              products.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+        if (recommendations['ingredients'] is List) {
+          for (final item in recommendations['ingredients'] as List) {
+            if (item is Map) {
+              ingredients.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+        setState(() {
+          qCompletionProcessing = false;
+          qCompletionReady = true;
+          qCompletionProducts = products;
+          qCompletionIngredients = ingredients;
+          qCompletionMessage = '';
+        });
+      } else {
+        setState(() {
+          qCompletionProcessing = false;
+          qCompletionReady = false;
+          qCompletionMessage = 'Unable to parse recommendations.';
+        });
+      }
       _showMessage('Questionnaire saved.');
-      setState(() => currentScreen = Screen.dashboard);
     } else {
-      final body = response['body'];
+      final body = createResponse['body'];
       final message =
           body is Map && body['message'] != null
               ? body['message'].toString()
-              : 'Unable to save preferences.';
+              : 'Unable to create skin profile.';
+      setState(() {
+        qCompletionProcessing = false;
+        qCompletionReady = false;
+        qCompletionMessage = message;
+      });
       _showMessage(message, isError: true);
     }
   }

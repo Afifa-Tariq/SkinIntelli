@@ -1,52 +1,45 @@
 part of 'package:skinintelli/main.dart';
 
 extension ProductsScreenWidgets on _SkinIntelAppState {
-  Widget _productsScreen() {
-    final List<Map<String, dynamic>> products = [
-      {
-        'name': 'Hydrating Moisturizer',
-        'brand': 'SkinCare Pro',
-        'rating': 4.8,
-        'price': '\$45.99',
-        'icon': Icons.water_drop,
-      },
-      {
-        'name': 'Vitamin C Serum',
-        'brand': 'Bright Skin',
-        'rating': 4.9,
-        'price': '\$38.50',
-        'icon': Icons.star,
-      },
-      {
-        'name': 'Gentle Cleanser',
-        'brand': 'Pure Essence',
-        'rating': 4.7,
-        'price': '\$22.99',
-        'icon': Icons.bubble_chart,
-      },
-      {
-        'name': 'Retinol Night Cream',
-        'brand': 'Anti-Age Elite',
-        'rating': 4.9,
-        'price': '\$65.00',
-        'icon': Icons.nights_stay,
-      },
-      {
-        'name': 'Sunscreen SPF 50',
-        'brand': 'UV Shield',
-        'rating': 4.8,
-        'price': '\$32.99',
-        'icon': Icons.wb_sunny,
-      },
-      {
-        'name': 'Exfoliating Toner',
-        'brand': 'Glow Up',
-        'rating': 4.6,
-        'price': '\$28.50',
-        'icon': Icons.autorenew,
-      },
-    ];
+  Future<Map<String, dynamic>> _loadRecommendations() async {
+    final response = await ApiService.getRecommendations(
+      filter: {'category': 'serum'},
+    );
+    if (response['statusCode'] == 200) {
+      final body = response['body'];
+      final rawProducts = body['products'];
+      final products = <Map<String, dynamic>>[];
+      if (rawProducts is List) {
+        for (final item in rawProducts) {
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(
+              item as Map<dynamic, dynamic>,
+            );
+            if (!(map['is_blocked'] as bool? ?? false)) {
+              products.add(map);
+            }
+          }
+        }
+      }
+      return {'products': products, 'message': null};
+    }
 
+    if ((response['statusCode'] ?? 0) == 404) {
+      return {
+        'products': <Map<String, dynamic>>[],
+        'message':
+            'Complete your skin profile to see personalized product recommendations.',
+      };
+    }
+
+    return {
+      'products': <Map<String, dynamic>>[],
+      'message':
+          response['body']?['message'] ?? 'Unable to load recommendations.',
+    };
+  }
+
+  Widget _productsScreen() {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Stack(
@@ -118,93 +111,173 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ...products.map((product) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: AppTheme.background,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            product['icon'],
-                            color: AppTheme.primary,
-                            size: 28,
+                FutureBuilder<Map<String, dynamic>>(
+                  future: _loadRecommendations(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    final data =
+                        snapshot.data ??
+                        {'products': <Map<String, dynamic>>[], 'message': null};
+                    final products =
+                        (data['products'] as List<Map<String, dynamic>>?) ??
+                        const <Map<String, dynamic>>[];
+                    final message = data['message'] as String?;
+
+                    if (message != null && message.isNotEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Text(
+                          message,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppTheme.mutedForeground,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product['name'],
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.foreground,
-                                ),
+                      );
+                    }
+
+                    if (products.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Text(
+                          'No personalized products available right now.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children:
+                          products.map((product) {
+                            final finalScore =
+                                (product['final_score'] as num?)?.toDouble() ??
+                                0.0;
+                            final normalizedRating = (finalScore / 20.0).clamp(
+                              0.0,
+                              5.0,
+                            );
+                            final explanation =
+                                product['explanation']?.toString() ??
+                                'Personalized recommendation';
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.card,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppTheme.border),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                product['brand'],
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: AppTheme.mutedForeground,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: List.generate(5, (index) {
-                                      return Icon(
-                                        index < product['rating'].floor()
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        color: AppTheme.accent,
-                                        size: 16,
-                                      );
-                                    }),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${product['rating']}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.foreground,
+                                  Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.background,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.auto_awesome,
+                                      color: AppTheme.primary,
+                                      size: 28,
                                     ),
                                   ),
-                                  const Spacer(),
-                                  Text(
-                                    product['price'],
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primary,
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          product['name']?.toString() ??
+                                              'Product',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.foreground,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          explanation,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            color: AppTheme.mutedForeground,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Row(
+                                              children: List.generate(5, (
+                                                index,
+                                              ) {
+                                                return Icon(
+                                                  index <
+                                                          normalizedRating
+                                                              .floor()
+                                                      ? Icons.star
+                                                      : Icons.star_border,
+                                                  color: AppTheme.accent,
+                                                  size: 16,
+                                                );
+                                              }),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              normalizedRating.toStringAsFixed(
+                                                1,
+                                              ),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.foreground,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            Text(
+                                              'Score ${finalScore.toStringAsFixed(0)}',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppTheme.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                            );
+                          }).toList(),
+                    );
+                  },
+                ),
                 const SizedBox(height: 40),
               ],
             ),
@@ -221,141 +294,147 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                 elevation: 16,
                 color: AppTheme.card,
                 child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: AppTheme.primary,
-                              child: const Icon(
-                                Icons.person,
-                                color: Colors.white,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: AppTheme.primary,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _userFullName.isNotEmpty
-                                        ? _userFullName
-                                        : 'User',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primary,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _userFullName.isNotEmpty
+                                          ? _userFullName
+                                          : 'User',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    registeredEmail,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.mutedForeground,
+                                    Text(
+                                      registeredEmail,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: AppTheme.mutedForeground,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed:
+                                    () => setState(() => menuOpen = false),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _drawerItem(
+                            Icons.dashboard,
+                            'Dashboard',
+                            currentScreen == Screen.dashboard,
+                            () => setState(() {
+                              currentScreen = Screen.dashboard;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.schedule,
+                            'My Schedule',
+                            currentScreen == Screen.schedule,
+                            () => setState(() {
+                              currentScreen = Screen.schedule;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.grass,
+                            'Ingredients',
+                            currentScreen == Screen.ingredients,
+                            () => setState(() {
+                              currentScreen = Screen.ingredients;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.inventory_2,
+                            'Products',
+                            currentScreen == Screen.products,
+                            () => setState(() {
+                              currentScreen = Screen.products;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.settings,
+                            'Recommendations',
+                            currentScreen == Screen.skinProfile,
+                            () => setState(() {
+                              currentScreen = Screen.skinProfile;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.settings,
+                            'Settings',
+                            currentScreen == Screen.profile,
+                            () => setState(() {
+                              currentScreen = Screen.profile;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.info_outline,
+                            'About',
+                            currentScreen == Screen.about,
+                            () => setState(() {
+                              currentScreen = Screen.about;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: ElevatedButton(
                               onPressed: () => setState(() => menuOpen = false),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        _drawerItem(
-                          Icons.dashboard,
-                          'Dashboard',
-                          currentScreen == Screen.dashboard,
-                          () => setState(() {
-                            currentScreen = Screen.dashboard;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.schedule,
-                          'My Schedule',
-                          currentScreen == Screen.schedule,
-                          () => setState(() {
-                            currentScreen = Screen.schedule;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.grass,
-                          'Ingredients',
-                          currentScreen == Screen.ingredients,
-                          () => setState(() {
-                            currentScreen = Screen.ingredients;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.inventory_2,
-                          'Products',
-                          currentScreen == Screen.products,
-                          () => setState(() {
-                            currentScreen = Screen.products;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.settings,
-                          'Recommendations',
-                          currentScreen == Screen.skinProfile,
-                          () => setState(() {
-                            currentScreen = Screen.skinProfile;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.settings,
-                          'Settings',
-                          currentScreen == Screen.profile,
-                          () => setState(() {
-                            currentScreen = Screen.profile;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.info_outline,
-                          'About',
-                          currentScreen == Screen.about,
-                          () => setState(() {
-                            currentScreen = Screen.about;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: () => setState(() => menuOpen = false),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            minimumSize: const Size(double.infinity, 52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                minimumSize: const Size(double.infinity, 52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: const Text(
+                                'Close',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ),
-                          child: const Text(
-                            'Close',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

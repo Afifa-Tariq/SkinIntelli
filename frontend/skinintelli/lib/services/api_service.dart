@@ -230,6 +230,16 @@ class ApiService {
     ),
   );
 
+  static Future<Map<String, dynamic>> getRecommendations({
+    Map<String, dynamic>? filter,
+  }) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/recommendations/generate'),
+      headers: authHeaders,
+      body: jsonEncode({'filter': filter}),
+    ),
+  );
+
   static Map<String, dynamic> _normalizeResponse(http.Response response) {
     dynamic body;
     try {

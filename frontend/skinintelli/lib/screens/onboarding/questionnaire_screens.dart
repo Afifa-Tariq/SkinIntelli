@@ -105,6 +105,7 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -203,6 +204,7 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -222,7 +224,7 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
     onBack: () => setState(() => currentScreen = Screen.qAllergies),
     onNext: () {
       setState(() => currentScreen = Screen.qCompletion);
-      _startQCompletionTimer();
+      _submitQuestionnaire();
     },
     canNext: qEnvironment.isNotEmpty,
     options: [
@@ -288,6 +290,49 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
         ),
       );
     }
+    if (qCompletionMessage.isNotEmpty) {
+      return Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 24),
+                Text(
+                  'Unable to generate recommendations',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  qCompletionMessage,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: isLoading ? null : () => _submitQuestionnaire(),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 56),
+                    backgroundColor: AppTheme.primary,
+                  ),
+                  child: const Text('Try Again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     if (qCompletionReady) {
       return Scaffold(
         backgroundColor: AppTheme.background,
@@ -341,27 +386,38 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                 ),
               ),
               const SizedBox(height: 12),
-              Column(
-                children: [
-                  _recommendationCard(
-                    icon: Icons.opacity,
-                    title: 'Hyaluronic Acid',
-                    subtitle: 'Deep hydration & moisture retention',
+              if (qCompletionIngredients.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.border),
                   ),
-                  const SizedBox(height: 12),
-                  _recommendationCard(
-                    icon: Icons.auto_awesome,
-                    title: 'Niacinamide',
-                    subtitle: 'Reduces inflammation & brightens skin',
+                  child: Text(
+                    'No ingredient recommendations are available right now.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: AppTheme.mutedForeground,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _recommendationCard(
-                    icon: Icons.grass,
-                    title: 'Salicylic Acid',
-                    subtitle: 'Unclogs pores & prevents acne',
-                  ),
-                ],
-              ),
+                )
+              else
+                Column(
+                  children:
+                      qCompletionIngredients.map((ingredient) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _recommendationCard(
+                            icon: Icons.opacity,
+                            title:
+                                ingredient['name']?.toString() ?? 'Ingredient',
+                            subtitle: ingredient['benefit']?.toString() ?? '',
+                          ),
+                        );
+                      }).toList(),
+                ),
               const SizedBox(height: 24),
               Text(
                 'Recommended Products',
@@ -371,30 +427,41 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                 ),
               ),
               const SizedBox(height: 12),
-              Column(
-                children: [
-                  _recommendationCard(
-                    icon: Icons.wb_sunny,
-                    title: 'Gentle Cleanser',
-                    subtitle: 'Morning & Night',
+              if (qCompletionProducts.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.border),
                   ),
-                  const SizedBox(height: 12),
-                  _recommendationCard(
-                    icon: Icons.opacity,
-                    title: 'Vitamin C Serum',
-                    subtitle: 'Morning',
+                  child: Text(
+                    'No product recommendations are available right now.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: AppTheme.mutedForeground,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _recommendationCard(
-                    icon: Icons.wb_twighlight,
-                    title: 'Moisturizer SPF 50',
-                    subtitle: 'Morning',
-                  ),
-                ],
-              ),
+                )
+              else
+                Column(
+                  children:
+                      qCompletionProducts.map((product) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _recommendationCard(
+                            icon: Icons.shopping_bag,
+                            title: product['name']?.toString() ?? 'Product',
+                            subtitle: product['explanation']?.toString() ?? '',
+                          ),
+                        );
+                      }).toList(),
+                ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: isLoading ? null : _submitQuestionnaire,
+                onPressed:
+                    () => setState(() => currentScreen = Screen.dashboard),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 56),
                   backgroundColor: AppTheme.primary,

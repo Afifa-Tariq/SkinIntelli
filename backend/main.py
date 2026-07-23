@@ -9,6 +9,7 @@ from auth import auth_bp
 from config import DevelopmentConfig, ProductionConfig
 from extensions import bcrypt, db, jwt, limiter, mail, cors
 from models import TokenBlocklist
+from recommendation_engine.recommendation import recommendation_bp
 from skin_profile import skin_profile_bp
 from user import user_bp
 
@@ -36,6 +37,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(skin_profile_bp)
+    app.register_blueprint(recommendation_bp)
 
     @app.route("/", methods=["GET"])
     def health_check():

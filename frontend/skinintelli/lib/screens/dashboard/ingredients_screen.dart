@@ -2,34 +2,7 @@ part of 'package:skinintelli/main.dart';
 
 extension IngredientsScreenWidgets on _SkinIntelAppState {
   Widget _ingredientsScreen() {
-    final List<Map<String, String>> ingredients = [
-      {
-        'name': 'Hyaluronic Acid',
-        'benefit': 'Deep hydration and moisture retention',
-        'icon': '💧',
-      },
-      {
-        'name': 'Retinol',
-        'benefit': 'Anti-aging and cell renewal',
-        'icon': '✨',
-      },
-      {
-        'name': 'Niacinamide',
-        'benefit': 'Pore minimizing and oil control',
-        'icon': '🎯',
-      },
-      {
-        'name': 'Vitamin C',
-        'benefit': 'Brightening and antioxidant protection',
-        'icon': '🌟',
-      },
-      {'name': 'Peptides', 'benefit': 'Firming and anti-aging', 'icon': '💪'},
-      {
-        'name': 'Salicylic Acid',
-        'benefit': 'Exfoliation and acne prevention',
-        'icon': '🔄',
-      },
-    ];
+    final recommendationsFuture = _loadDashboardRecommendations();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -102,50 +75,85 @@ extension IngredientsScreenWidgets on _SkinIntelAppState {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ...ingredients.map((ingredient) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ingredient['icon'] ?? '',
-                          style: const TextStyle(fontSize: 32),
+                FutureBuilder<Map<String, dynamic>>(
+                  future: recommendationsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ingredient['name'] ?? '',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.foreground,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                ingredient['benefit'] ?? '',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: AppTheme.mutedForeground,
-                                ),
-                              ),
-                            ],
+                      );
+                    }
+
+                    final data =
+                        snapshot.data ??
+                        {
+                          'products': <Map<String, dynamic>>[],
+                          'ingredients': <Map<String, dynamic>>[],
+                          'message': null,
+                        };
+                    final ingredients =
+                        (data['ingredients'] as List<dynamic>?)
+                            ?.cast<Map<String, dynamic>>() ??
+                        const <Map<String, dynamic>>[];
+                    final message = data['message'] as String?;
+
+                    if (message != null && message.isNotEmpty) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Text(
+                          message,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppTheme.mutedForeground,
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }
+
+                    if (ingredients.isEmpty) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Text(
+                          'No ingredient recommendations are available right now.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children:
+                          ingredients.map((ingredient) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _recommendationCard(
+                                icon: Icons.opacity,
+                                title: ingredient['name']?.toString() ?? '',
+                                subtitle:
+                                    ingredient['benefit']?.toString() ?? '',
+                              ),
+                            );
+                          }).toList(),
+                    );
+                  },
+                ),
                 const SizedBox(height: 40),
               ],
             ),
@@ -162,141 +170,147 @@ extension IngredientsScreenWidgets on _SkinIntelAppState {
                 elevation: 16,
                 color: AppTheme.card,
                 child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: AppTheme.primary,
-                              child: const Icon(
-                                Icons.person,
-                                color: Colors.white,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: AppTheme.primary,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _userFullName.isNotEmpty
-                                        ? _userFullName
-                                        : 'User',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primary,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _userFullName.isNotEmpty
+                                          ? _userFullName
+                                          : 'User',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    registeredEmail,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.mutedForeground,
+                                    Text(
+                                      registeredEmail,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: AppTheme.mutedForeground,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed:
+                                    () => setState(() => menuOpen = false),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _drawerItem(
+                            Icons.dashboard,
+                            'Dashboard',
+                            currentScreen == Screen.dashboard,
+                            () => setState(() {
+                              currentScreen = Screen.dashboard;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.schedule,
+                            'My Schedule',
+                            currentScreen == Screen.schedule,
+                            () => setState(() {
+                              currentScreen = Screen.schedule;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.grass,
+                            'Ingredients',
+                            currentScreen == Screen.ingredients,
+                            () => setState(() {
+                              currentScreen = Screen.ingredients;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.inventory_2,
+                            'Products',
+                            currentScreen == Screen.products,
+                            () => setState(() {
+                              currentScreen = Screen.products;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.settings,
+                            'Recommendations',
+                            currentScreen == Screen.skinProfile,
+                            () => setState(() {
+                              currentScreen = Screen.skinProfile;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.settings,
+                            'Settings',
+                            currentScreen == Screen.profile,
+                            () => setState(() {
+                              currentScreen = Screen.profile;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.info_outline,
+                            'About',
+                            currentScreen == Screen.about,
+                            () => setState(() {
+                              currentScreen = Screen.about;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: ElevatedButton(
                               onPressed: () => setState(() => menuOpen = false),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        _drawerItem(
-                          Icons.dashboard,
-                          'Dashboard',
-                          currentScreen == Screen.dashboard,
-                          () => setState(() {
-                            currentScreen = Screen.dashboard;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.schedule,
-                          'My Schedule',
-                          currentScreen == Screen.schedule,
-                          () => setState(() {
-                            currentScreen = Screen.schedule;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.grass,
-                          'Ingredients',
-                          currentScreen == Screen.ingredients,
-                          () => setState(() {
-                            currentScreen = Screen.ingredients;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.inventory_2,
-                          'Products',
-                          currentScreen == Screen.products,
-                          () => setState(() {
-                            currentScreen = Screen.products;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.settings,
-                          'Recommendations',
-                          currentScreen == Screen.skinProfile,
-                          () => setState(() {
-                            currentScreen = Screen.skinProfile;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.settings,
-                          'Settings',
-                          currentScreen == Screen.profile,
-                          () => setState(() {
-                            currentScreen = Screen.profile;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.info_outline,
-                          'About',
-                          currentScreen == Screen.about,
-                          () => setState(() {
-                            currentScreen = Screen.about;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: () => setState(() => menuOpen = false),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            minimumSize: const Size(double.infinity, 52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                minimumSize: const Size(double.infinity, 52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: const Text(
+                                'Close',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ),
-                          child: const Text(
-                            'Close',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

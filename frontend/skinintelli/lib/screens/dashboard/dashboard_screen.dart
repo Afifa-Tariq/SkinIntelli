@@ -350,6 +350,8 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
               ],
             ),
           ),
+
+          // ── Side Drawer ──
           if (menuOpen)
             Positioned.fill(
               child: GestureDetector(
@@ -370,141 +372,147 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                 elevation: 16,
                 color: AppTheme.card,
                 child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: AppTheme.primary,
-                              child: const Icon(
-                                Icons.person,
-                                color: Colors.white,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: AppTheme.primary,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _userFullName.isNotEmpty
-                                        ? _userFullName
-                                        : 'User',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primary,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _userFullName.isNotEmpty
+                                          ? _userFullName
+                                          : 'User',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    registeredEmail,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.mutedForeground,
+                                    Text(
+                                      registeredEmail,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: AppTheme.mutedForeground,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed:
+                                    () => setState(() => menuOpen = false),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _drawerItem(
+                            Icons.dashboard,
+                            'Dashboard',
+                            currentScreen == Screen.dashboard,
+                            () => setState(() {
+                              currentScreen = Screen.dashboard;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.schedule,
+                            'My Schedule',
+                            currentScreen == Screen.schedule,
+                            () => setState(() {
+                              currentScreen = Screen.schedule;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.grass,
+                            'Ingredients',
+                            currentScreen == Screen.ingredients,
+                            () => setState(() {
+                              currentScreen = Screen.ingredients;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.inventory_2,
+                            'Products',
+                            currentScreen == Screen.products,
+                            () => setState(() {
+                              currentScreen = Screen.products;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.settings,
+                            'Recommendations',
+                            currentScreen == Screen.skinProfile,
+                            () => setState(() {
+                              currentScreen = Screen.skinProfile;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.settings,
+                            'Settings',
+                            currentScreen == Screen.profile,
+                            () => setState(() {
+                              currentScreen = Screen.profile;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.info_outline,
+                            'About',
+                            currentScreen == Screen.about,
+                            () => setState(() {
+                              currentScreen = Screen.about;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: ElevatedButton(
                               onPressed: () => setState(() => menuOpen = false),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        _drawerItem(
-                          Icons.dashboard,
-                          'Dashboard',
-                          currentScreen == Screen.dashboard,
-                          () => setState(() {
-                            currentScreen = Screen.dashboard;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.schedule,
-                          'My Schedule',
-                          currentScreen == Screen.schedule,
-                          () => setState(() {
-                            currentScreen = Screen.schedule;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.grass,
-                          'Ingredients',
-                          currentScreen == Screen.ingredients,
-                          () => setState(() {
-                            currentScreen = Screen.ingredients;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.inventory_2,
-                          'Products',
-                          currentScreen == Screen.products,
-                          () => setState(() {
-                            currentScreen = Screen.products;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.settings,
-                          'Recommendations',
-                          currentScreen == Screen.skinProfile,
-                          () => setState(() {
-                            currentScreen = Screen.skinProfile;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.settings,
-                          'Settings',
-                          currentScreen == Screen.profile,
-                          () => setState(() {
-                            currentScreen = Screen.profile;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        _drawerItem(
-                          Icons.info_outline,
-                          'About',
-                          currentScreen == Screen.about,
-                          () => setState(() {
-                            currentScreen = Screen.about;
-                            menuOpen = false;
-                          }),
-                        ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: () => setState(() => menuOpen = false),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            minimumSize: const Size(double.infinity, 52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                minimumSize: const Size(double.infinity, 52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: const Text(
+                                'Close',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ),
-                          child: const Text(
-                            'Close',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

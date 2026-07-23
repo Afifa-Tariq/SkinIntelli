@@ -2,41 +2,7 @@ part of 'package:skinintelli/main.dart';
 
 extension SkinProfileScreenWidgets on _SkinIntelAppState {
   Widget _skinProfileScreen() {
-    final List<Map<String, dynamic>> recommendations = [
-      {
-        'name': 'Niacinamide Serum',
-        'time': 'Morning & Night',
-        'benefits': ['Reduces Acne', 'Controls Oil'],
-        'rating': 4.8,
-      },
-      {
-        'name': 'Salicylic Acid Cleanser',
-        'time': 'Morning & Night',
-        'benefits': ['Unclogs Pores', 'Prevents Breakouts'],
-        'rating': 4.7,
-      },
-      {
-        'name': 'Hyaluronic Acid Toner',
-        'time': 'After Cleansing',
-        'benefits': ['Deep Hydration', 'Plumps Skin'],
-        'rating': 4.9,
-      },
-    ];
-
-    final List<Map<String, dynamic>> ingredients = [
-      {
-        'name': 'Niacinamide',
-        'benefit': 'Anti-inflammatory',
-        'icon': Icons.shield,
-      },
-      {'name': 'Salicylic Acid', 'benefit': 'Exfoliation', 'icon': Icons.star},
-      {
-        'name': 'Hyaluronic Acid',
-        'benefit': 'Hydration',
-        'icon': Icons.opacity,
-      },
-      {'name': 'Vitamin C', 'benefit': 'Brightening', 'icon': Icons.wb_sunny},
-    ];
+    final recommendationsFuture = _loadDashboardRecommendations();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -239,212 +205,151 @@ extension SkinProfileScreenWidgets on _SkinIntelAppState {
                 ),
                 const SizedBox(height: 24),
 
-                // Recommendations
-                Text(
-                  'Recommended Products',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Column(
-                  children:
-                      recommendations.map((product) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.card,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppTheme.border),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withAlpha(
-                                    (0.06 * 255).round(),
-                                  ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            product['name'],
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppTheme.foreground,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            product['time'],
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              color: AppTheme.mutedForeground,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.star,
-                                          color: Color(0xFFFFA500),
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          product['rating'].toString(),
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppTheme.foreground,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 6,
-                                  children:
-                                      (product['benefits'] as List<String>)
-                                          .map(
-                                            (benefit) => Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 4,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primary
-                                                    .withAlpha(
-                                                      (0.12 * 255).round(),
-                                                    ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                benefit,
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: AppTheme.primary,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                ),
-                const SizedBox(height: 24),
+                FutureBuilder<Map<String, dynamic>>(
+                  future: recommendationsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
 
-                // Key Ingredients
-                Text(
-                  'Key Ingredients',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Column(
-                  children:
-                      ingredients.map((ingredient) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
+                    final data =
+                        snapshot.data ??
+                        {
+                          'products': <Map<String, dynamic>>[],
+                          'ingredients': <Map<String, dynamic>>[],
+                          'message': null,
+                        };
+                    final products =
+                        (data['products'] as List<dynamic>?)
+                            ?.cast<Map<String, dynamic>>() ??
+                        const <Map<String, dynamic>>[];
+                    final ingredients =
+                        (data['ingredients'] as List<dynamic>?)
+                            ?.cast<Map<String, dynamic>>() ??
+                        const <Map<String, dynamic>>[];
+                    final message = data['message'] as String?;
+
+                    if (message != null && message.isNotEmpty) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Text(
+                          message,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Recommended Products',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (products.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: AppTheme.card,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: AppTheme.border),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withAlpha(
-                                    (0.06 * 255).round(),
-                                  ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primary.withAlpha(
-                                      (0.12 * 255).round(),
+                            child: Text(
+                              'No product recommendations are available right now.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                          )
+                        else
+                          Column(
+                            children:
+                                products.map((product) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _recommendationCard(
+                                      icon: Icons.shopping_bag,
+                                      title:
+                                          product['name']?.toString() ??
+                                          'Product',
+                                      subtitle:
+                                          product['explanation']?.toString() ??
+                                          'Personalized recommendation',
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    ingredient['icon'],
-                                    color: AppTheme.primary,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        ingredient['name'],
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.foreground,
-                                        ),
-                                      ),
-                                      Text(
-                                        ingredient['benefit'],
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: AppTheme.mutedForeground,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: AppTheme.primary,
-                                  size: 20,
-                                ),
-                              ],
-                            ),
+                                  );
+                                }).toList(),
                           ),
-                        );
-                      }).toList(),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Key Ingredients',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (ingredients.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.card,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            child: Text(
+                              'No ingredient recommendations are available right now.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                          )
+                        else
+                          Column(
+                            children:
+                                ingredients.map((ingredient) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _recommendationCard(
+                                      icon: Icons.opacity,
+                                      title:
+                                          ingredient['name']?.toString() ??
+                                          'Ingredient',
+                                      subtitle:
+                                          ingredient['benefit']?.toString() ??
+                                          'Supports your skin profile.',
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
               ],
             ),
           ),

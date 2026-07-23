@@ -4,7 +4,7 @@ from werkzeug.exceptions import BadRequest
 
 from extensions import db
 from models import SkinProfile, User
-from skin_profile.recommendations import generate_recommendations
+from recommendation_engine.recommendation_engine import RecommendationEngine
 
 skin_profile_bp = Blueprint("skin_profile", __name__, url_prefix="/api/skin-profile")
 
@@ -69,7 +69,8 @@ def submit_skin_profile():
     db.session.add(user)
     db.session.commit()
 
-    recommendations = generate_recommendations(profile)
+    engine = RecommendationEngine()
+    recommendations = engine.generate(user.id)
     return jsonify(skin_profile=profile.to_dict(), recommendations=recommendations), 201
 
 
@@ -90,7 +91,8 @@ def get_latest_skin_profile():
     if not profile:
         return jsonify(message="NO_PROFILE"), 404
 
-    recommendations = generate_recommendations(profile)
+    engine = RecommendationEngine()
+    recommendations = engine.generate(user.id)
     return jsonify(skin_profile=profile.to_dict(), recommendations=recommendations), 200
 
 
