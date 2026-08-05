@@ -638,6 +638,16 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                               menuOpen = false;
                             }),
                           ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.schedule,
+                            'Appoinments',
+                            currentScreen == Screen.schedule,
+                            () => setState(() {
+                              currentScreen = Screen.schedule;
+                              menuOpen = false;
+                            }),
+                          ),
                           const SizedBox(height: 20),
                           Padding(
                             padding: const EdgeInsets.only(bottom: 16),
