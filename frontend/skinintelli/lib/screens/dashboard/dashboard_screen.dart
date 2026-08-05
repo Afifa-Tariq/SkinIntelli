@@ -104,20 +104,36 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  'Good Morning ✨',
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.foreground,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Let\'s check your skin today',
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    color: AppTheme.mutedForeground,
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Good Morning ✨',
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Let\'s check your skin today',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: AppTheme.mutedForeground,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),

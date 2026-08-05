@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import text
 
 from extensions import db
+from recommendation_engine.explanation_engine import build_explanation
 
 
 
@@ -344,40 +345,35 @@ class RecommendationEngine:
         product: Dict[str, Any],
         matched_rules: List[Dict[str, Any]],
         conflicts: List[Dict[str, Any]],
-    ) -> str:
-        segments: List[str] = []
-        boost_rules = [rule for rule in matched_rules if str(rule.get("effect") or "").upper() == "BOOST"]
-        warn_rules = [rule for rule in matched_rules if str(rule.get("effect") or "").upper() == "WARN"]
-
-        for rule in boost_rules:
-            template = rule.get("explanation_template") or f"Boosted because {rule.get('rule_name') or 'a matching rule'} applied."
-            segment = self._fill_template(template, {"product": product.get("name"), **rule})
-            if segment:
-                segments.append(segment)
-
-        for rule in warn_rules:
-            template = rule.get("explanation_template") or f"Warning because {rule.get('rule_name') or 'a matching rule'} applied."
-            segment = self._fill_template(template, {"product": product.get("name"), **rule})
-            if segment:
-                segments.append(segment)
-
-        for conflict in conflicts:
-            if str(conflict.get("severity") or "").lower() == "hard_block":
-                continue
-            segment = self._fill_template(
-                conflict.get("explanation") or "Potential ingredient interaction detected.",
-                {
-                    "product": product.get("name"),
-                    "ingredient_a_id": conflict.get("ingredient_a_id"),
-                    "ingredient_b_id": conflict.get("ingredient_b_id"),
+        profile: Optional[UserProfile] = None,
+    ) -> Dict[str, Any]:
+        profile_payload = {
+            "skin_type": profile.skin_type if profile else None,
+            "concerns": list(profile.concerns or []) if profile else [],
+            "allergen_ingredient_ids": list(profile.allergy_ingredient_ids or []) if profile else [],
+        }
+        ingredient_functions = self._load_ingredient_functions(product.get("ingredient_ids") or [])
+        proof_rows = [
+            {
+                "ingredient_id": ingredient.get("ingredient_id"),
+                "ingredient": {
+                    "inci_name": ingredient.get("inci_name"),
+                    "cir_approved": True,
+                    "irritancy_score": 0,
+                    "base_safety_score": 95,
                 },
-            )
-            if segment:
-                segments.append(segment)
-
-        if not segments:
-            return f"{product.get('name') or 'This product'} was assessed against your profile."
-        return " ".join(segments)
+            }
+            for ingredient in product.get("ingredients", [])
+        ]
+        return build_explanation(
+            product=product,
+            eval_result={"final_score": self.aggregate_score(product, matched_rules, [])},
+            fired_rules=matched_rules,
+            user_profile=profile_payload,
+            pi_rows=proof_rows,
+            ingredient_functions=ingredient_functions,
+            conflict_rows=conflicts,
+        )
 
     def _fill_template(self, template: Optional[str], values: Dict[str, Any]) -> str:
         if not template:
@@ -399,6 +395,7 @@ class RecommendationEngine:
         evaluated_products: List[Dict[str, Any]] = []
         for candidate in candidates:
             rule_result = self.evaluate_rules(candidate, profile)
+            matched_rules = rule_result["boosts"] + rule_result["warns"]
             if rule_result["is_blocked"]:
                 evaluated_products.append(
                     {
@@ -410,7 +407,7 @@ class RecommendationEngine:
                         "boosts": rule_result["boosts"],
                         "warns": rule_result["warns"],
                         "conflicts": [],
-                        "explanation": self.generate_explanation(candidate, rule_result["boosts"] + rule_result["warns"], []),
+                        "explanation": self.generate_explanation(candidate, matched_rules, [], profile),
                         "rank": None,
                         "block_source": "rule",
                     }
@@ -429,7 +426,7 @@ class RecommendationEngine:
                         "boosts": rule_result["boosts"],
                         "warns": rule_result["warns"],
                         "conflicts": conflict_result["conflicts"],
-                        "explanation": self.generate_explanation(candidate, rule_result["boosts"] + rule_result["warns"], conflict_result["conflicts"]),
+                        "explanation": self.generate_explanation(candidate, matched_rules, conflict_result["conflicts"], profile),
                         "rank": None,
                         "block_source": "conflict",
                     }
@@ -437,7 +434,7 @@ class RecommendationEngine:
                 continue
 
             final_score = self.aggregate_score(candidate, rule_result["boosts"], rule_result["warns"])
-            explanation = self.generate_explanation(candidate, rule_result["boosts"] + rule_result["warns"], conflict_result["conflicts"])
+            explanation = self.generate_explanation(candidate, matched_rules, conflict_result["conflicts"], profile)
             evaluated_products.append(
                 {
                     "product_id": candidate.get("product_id"),
@@ -479,9 +476,30 @@ class RecommendationEngine:
         ]
         return {
             "record_id": record_id,
+            "recommendations": {
+                "products": response_products,
+                "ingredients": ingredients,
+            },
             "products": response_products,
             "ingredients": ingredients,
         }
+
+    def _load_ingredient_functions(self, ingredient_ids: List[int]) -> List[Dict[str, Any]]:
+        if not ingredient_ids:
+            return []
+        placeholders = ", ".join([f":ingredient_{index}" for index in range(len(ingredient_ids))])
+        query = text(
+            f"""
+            SELECT
+                ingredient_id,
+                function_name
+            FROM ingredient_functions
+            WHERE ingredient_id IN ({placeholders})
+            """
+        )
+        params = {f"ingredient_{index}": ingredient_id for index, ingredient_id in enumerate(ingredient_ids)}
+        rows = db.session.execute(query, params).mappings().all()
+        return [{"ingredient_id": row.get("ingredient_id"), "function_name": row.get("function_name")} for row in rows]
 
     def _persist_result(
         self,
@@ -555,7 +573,7 @@ class RecommendationEngine:
                     "boost_summary": boost_summary,
                     "warning_summary": warning_summary,
                     "allergy_flags": allergy_flags,
-                    "explanation": product.get("explanation"),
+                    "explanation": json.dumps(product.get("explanation"), ensure_ascii=False) if isinstance(product.get("explanation"), dict) else product.get("explanation"),
                     "rank": product.get("rank"),
                 },
             )

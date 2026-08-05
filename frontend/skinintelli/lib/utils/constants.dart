@@ -27,19 +27,23 @@ class AppTheme {
   static const String devMachineIp = '192.168.1.42';
 
   static String get backendBaseUrl {
-    if (kIsWeb) return 'http://localhost:5000';
+    if (kIsWeb) {
+      return 'http://localhost:5000';
+    }
 
     if (kDebugMode) {
-      if (devMachineIp != '192.168.1.x') {
-        return 'http://$devMachineIp:5000';
-      }
       if (defaultTargetPlatform == TargetPlatform.android) {
         return 'http://10.0.2.2:5000';
       }
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        return 'http://127.0.0.1:5000';
+      }
+      if (devMachineIp != '192.168.1.42') {
+        return 'http://$devMachineIp:5000';
+      }
       debugPrint(
-        'WARNING: AppTheme.devMachineIp is still set to the placeholder "192.168.1.x". '
-        'On a physical device, 127.0.0.1 refers to the device itself, not your PC. '
-        'Set devMachineIp to your PC LAN IP to connect to the backend.',
+        'Using local backend fallback for desktop debug builds. '
+        'If testing on a physical device, set devMachineIp to your PC LAN IP.',
       );
     }
     return 'http://127.0.0.1:5000';

@@ -9,3 +9,4 @@ marshmallow-sqlalchemy
 flask-limiter
 python-dotenv
 PyMySQL
+cryptography

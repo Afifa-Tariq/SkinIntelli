@@ -1,6 +1,164 @@
 part of 'package:skinintelli/main.dart';
 
 extension ProductsScreenWidgets on _SkinIntelAppState {
+  Map<String, dynamic> _coerceExplanationMap(dynamic explanation) {
+    if (explanation is Map) {
+      return Map<String, dynamic>.from(explanation);
+    }
+
+    if (explanation is String) {
+      try {
+        final decoded = jsonDecode(explanation);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {
+        return {'summary': explanation};
+      }
+    }
+
+    return const <String, dynamic>{};
+  }
+
+  String _summaryFromExplanation(Map<String, dynamic> explanation) {
+    final pieces = <String>[];
+    final skinTypeMatch = explanation['skin_type_match']?.toString();
+    if (skinTypeMatch != null && skinTypeMatch.isNotEmpty) {
+      pieces.add(skinTypeMatch);
+    }
+
+    final concernTargeting = explanation['concern_targeting'];
+    if (concernTargeting is List && concernTargeting.isNotEmpty) {
+      final firstConcern = concernTargeting.first?.toString();
+      if (firstConcern != null && firstConcern.isNotEmpty) {
+        pieces.add(firstConcern);
+      }
+    }
+
+    final confidenceScore = explanation['confidence_score'];
+    if (confidenceScore != null) {
+      pieces.add('Confidence $confidenceScore%');
+    }
+
+    return pieces.isNotEmpty
+        ? pieces.join(' • ')
+        : 'Personalized recommendation';
+  }
+
+  List<Widget> _detailWidgetsFromExplanation(Map<String, dynamic> explanation) {
+    final widgets = <Widget>[];
+    final orderedEntries = <String, dynamic>{
+      'skin_type_match': explanation['skin_type_match'],
+      'concern_targeting': explanation['concern_targeting'],
+      'safety_summary': explanation['safety_summary'],
+      'conflict_exclusions': explanation['conflict_exclusions'],
+      'confidence_breakdown': explanation['confidence_breakdown'],
+      'recommendation_priority': explanation['recommendation_priority'],
+      'priority_reason': explanation['priority_reason'],
+      'scientific_reasoning': explanation['scientific_reasoning'],
+      'expected_benefits': explanation['expected_benefits'],
+    };
+
+    for (final entry in orderedEntries.entries) {
+      final value = entry.value;
+      if (value == null) {
+        continue;
+      }
+
+      if (value is List && value.isNotEmpty) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _labelForExplanationKey(entry.key),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.foreground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...value.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      item.toString(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        color: AppTheme.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else if (value is String && value.isNotEmpty) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _labelForExplanationKey(entry.key),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.foreground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    return widgets;
+  }
+
+  String _labelForExplanationKey(String key) {
+    switch (key) {
+      case 'skin_type_match':
+        return 'Skin type match';
+      case 'concern_targeting':
+        return 'Concern targeting';
+      case 'safety_summary':
+        return 'Safety summary';
+      case 'conflict_exclusions':
+        return 'Conflicts excluded';
+      case 'confidence_breakdown':
+        return 'Confidence breakdown';
+      case 'recommendation_priority':
+        return 'Priority';
+      case 'priority_reason':
+        return 'Priority reason';
+      case 'scientific_reasoning':
+        return 'Scientific reasoning';
+      case 'expected_benefits':
+        return 'Expected benefits';
+      default:
+        return key
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((word) => word[0].toUpperCase() + word.substring(1))
+            .join(' ');
+    }
+  }
+
   Future<Map<String, dynamic>> _loadRecommendations() async {
     final response = await ApiService.getRecommendations(
       filter: {'category': 'serum'},
@@ -12,9 +170,7 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
       if (rawProducts is List) {
         for (final item in rawProducts) {
           if (item is Map) {
-            final map = Map<String, dynamic>.from(
-              item as Map<dynamic, dynamic>,
-            );
+            final map = Map<String, dynamic>.from(item);
             if (!(map['is_blocked'] as bool? ?? false)) {
               products.add(map);
             }
@@ -115,10 +271,32 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                   future: _loadRecommendations(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: CircularProgressIndicator(),
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Gathering your personalized recommendations...',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }
@@ -133,36 +311,55 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
 
                     if (message != null && message.isNotEmpty) {
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: AppTheme.card,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: AppTheme.border),
                         ),
-                        child: Text(
-                          message,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: AppTheme.mutedForeground,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: AppTheme.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                message,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }
 
                     if (products.isEmpty) {
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: AppTheme.card,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: AppTheme.border),
                         ),
-                        child: Text(
-                          'No personalized products available right now.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: AppTheme.mutedForeground,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome_outlined,
+                              color: AppTheme.accent,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'No personalized products available right now. Complete your skin profile to unlock recommendations.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }
@@ -177,9 +374,15 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                               0.0,
                               5.0,
                             );
-                            final explanation =
-                                product['explanation']?.toString() ??
-                                'Personalized recommendation';
+                            final explanationMap = _coerceExplanationMap(
+                              product['explanation'],
+                            );
+                            final explanationSummary = _summaryFromExplanation(
+                              explanationMap,
+                            );
+                            final detailWidgets = _detailWidgetsFromExplanation(
+                              explanationMap,
+                            );
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -222,7 +425,7 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          explanation,
+                                          explanationSummary,
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
                                             color: AppTheme.mutedForeground,
@@ -267,6 +470,26 @@ extension ProductsScreenWidgets on _SkinIntelAppState {
                                               ),
                                             ),
                                           ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Theme(
+                                          data: Theme.of(context).copyWith(
+                                            dividerColor: Colors.transparent,
+                                          ),
+                                          child: ExpansionTile(
+                                            tilePadding: EdgeInsets.zero,
+                                            childrenPadding:
+                                                const EdgeInsets.only(top: 8),
+                                            title: Text(
+                                              'Why this recommendation?',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppTheme.primary,
+                                              ),
+                                            ),
+                                            children: detailWidgets,
+                                          ),
                                         ),
                                       ],
                                     ),

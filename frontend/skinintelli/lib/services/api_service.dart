@@ -240,6 +240,20 @@ class ApiService {
     ),
   );
 
+  static Future<Map<String, dynamic>> generateRoutine({
+    required List<Map<String, dynamic>> recommendations,
+    int profileId = 0,
+  }) => _safeRequest(
+    () => http.post(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/routine/generate'),
+      headers: authHeaders,
+      body: jsonEncode({
+        'profile_id': profileId,
+        'recommendations': recommendations,
+      }),
+    ),
+  );
+
   static Map<String, dynamic> _normalizeResponse(http.Response response) {
     dynamic body;
     try {
