@@ -143,17 +143,12 @@ extension IngredientsScreenWidgets on _SkinIntelAppState {
 
                     return Column(
                       children:
-                          ingredients.map((ingredient) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _recommendationCard(
-                                icon: Icons.opacity,
-                                title: ingredient['name']?.toString() ?? '',
-                                subtitle:
-                                    ingredient['benefit']?.toString() ?? '',
-                              ),
-                            );
-                          }).toList(),
+                          ingredients
+                              .map(
+                                (ingredient) =>
+                                    _ingredientRecommendationCard(ingredient),
+                              )
+                              .toList(),
                     );
                   },
                 ),

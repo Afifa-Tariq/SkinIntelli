@@ -6,6 +6,7 @@ dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
 
 from flask import Flask, jsonify
+from werkzeug.exceptions import RequestEntityTooLarge
 from auth import auth_bp
 from config import DevelopmentConfig, ProductionConfig
 from extensions import bcrypt, db, jwt, limiter, mail, cors
@@ -38,6 +39,16 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(config_object)
     app.config["SQLALCHEMY_DATABASE_URI"] = resolve_database_uri()
+    # 25MB request ceiling (raw phone photos are typically 5-15MB). Images
+    # themselves are downscaled/recompressed server-side once received; this
+    # just stops a genuinely oversized/misbehaving request from being read
+    # into memory at all, and returns clean JSON instead of Werkzeug's HTML
+    # error page (which would break JSON-decoding clients).
+    app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_request_entity_too_large(_exc):
+        return jsonify(error="The uploaded file is too large. Please use an image under 25MB."), 413
 
     db.init_app(app)
     jwt.init_app(app)

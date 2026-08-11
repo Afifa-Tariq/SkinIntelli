@@ -21,9 +21,17 @@ def generate_recommendations():
     except (TypeError, ValueError):
         return jsonify(message="INVALID_IDENTITY"), 401
 
+    top_n = 5
+    try:
+        top_n_raw = payload.get("top_n")
+        if top_n_raw is not None:
+            top_n = max(1, int(top_n_raw))
+    except (TypeError, ValueError):
+        top_n = 5
+
     try:
         engine = RecommendationEngine()
-        result = engine.generate(user_id, filter=payload.get("filter"))
+        result = engine.generate(user_id, filter=payload.get("filter"), top_n=top_n)
         return jsonify(result), 200
     except ValueError as exc:
         if str(exc) == "NO_SKIN_PROFILE":

@@ -1,19 +1,59 @@
 import base64
+import io
 import json
 import os
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from google import genai
 from google.genai import errors as genai_errors
+from PIL import Image, UnidentifiedImageError
 
 from extensions import db
 from models import SkinAnalysisSession, SkinProfile, User, UserImage
 from recommendation_engine.recommendation_engine import RecommendationEngine
 
 skin_analysis_bp = Blueprint("skin_analysis", __name__, url_prefix="/api/skin")
+
+# Phone camera photos are commonly 5-15MB, which is unnecessarily heavy for
+# both the Gemini request payload and long-term DB storage, and risks hitting
+# upstream payload-size limits. Every uploaded image is downscaled/recompressed
+# server-side before it's sent to Gemini or stored, regardless of what the
+# client sent.
+_MAX_IMAGE_DIMENSION = 1600
+_IMAGE_JPEG_QUALITY = 85
+
+
+def _optimize_image(image_bytes: bytes, mimetype: str) -> Tuple[bytes, str]:
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img.load()
+    except (UnidentifiedImageError, OSError):
+        # Not a format Pillow can decode; pass through untouched and let
+        # Gemini/validation downstream reject it with a clear error instead.
+        return image_bytes, mimetype
+
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    width, height = img.size
+    longest_side = max(width, height)
+    if longest_side > _MAX_IMAGE_DIMENSION:
+        scale = _MAX_IMAGE_DIMENSION / float(longest_side)
+        new_size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        img = img.resize(new_size, Image.LANCZOS)
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", quality=_IMAGE_JPEG_QUALITY, optimize=True)
+    optimized_bytes = buffer.getvalue()
+
+    # Only use the re-encoded version if it's actually smaller; a tiny image
+    # that's already efficiently encoded shouldn't be made bigger by this step.
+    if len(optimized_bytes) < len(image_bytes):
+        return optimized_bytes, "image/jpeg"
+    return image_bytes, mimetype
 
 # Google retired the old models.generate_content models (e.g. gemini-2.0-flash,
 # gemini-2.5-flash) in favor of the Interactions API. "gemini-flash-latest" is
@@ -184,6 +224,8 @@ def analyze_and_recommend_image():
     if not image_bytes:
         return jsonify(error="Uploaded image is empty."), 400
 
+    image_bytes, image_mimetype = _optimize_image(image_bytes, uploaded.mimetype or "image/jpeg")
+
     top_n = None
     try:
         top_n_raw = request.form.get("top_n")
@@ -223,7 +265,7 @@ def analyze_and_recommend_image():
         response = _generate_with_fallback(
             client,
             image_bytes,
-            uploaded.mimetype or "image/jpeg",
+            image_mimetype,
             prompt,
         )
 
@@ -302,7 +344,7 @@ def analyze_and_recommend_image():
                 session_id=session.id,
                 profile_id=latest_profile.id,
                 filename=uploaded.filename or "uploaded-image",
-                content_type=uploaded.mimetype or "image/jpeg",
+                content_type=image_mimetype,
                 source="upload",
                 image_bytes=image_bytes,
                 image_size=len(image_bytes),
@@ -317,11 +359,9 @@ def analyze_and_recommend_image():
         recommendations = _default_recommendations()
         if user is not None:
             try:
-                engine_result = RecommendationEngine().generate(user.id)
+                engine_result = RecommendationEngine().generate(user.id, top_n=top_n or 5)
                 engine_products = engine_result.get("products") or []
                 engine_ingredients = engine_result.get("ingredients") or []
-                if top_n:
-                    engine_products = engine_products[:top_n]
                 if engine_products or engine_ingredients:
                     recommendations = {
                         "products": engine_products,

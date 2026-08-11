@@ -285,20 +285,12 @@ extension SkinProfileScreenWidgets on _SkinIntelAppState {
                         else
                           Column(
                             children:
-                                products.map((product) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _recommendationCard(
-                                      icon: Icons.shopping_bag,
-                                      title:
-                                          product['name']?.toString() ??
-                                          'Product',
-                                      subtitle:
-                                          product['explanation']?.toString() ??
-                                          'Personalized recommendation',
-                                    ),
-                                  );
-                                }).toList(),
+                                products
+                                    .map(
+                                      (product) =>
+                                          _productRecommendationCard(product),
+                                    )
+                                    .toList(),
                           ),
                         const SizedBox(height: 24),
                         Text(
@@ -330,20 +322,14 @@ extension SkinProfileScreenWidgets on _SkinIntelAppState {
                         else
                           Column(
                             children:
-                                ingredients.map((ingredient) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _recommendationCard(
-                                      icon: Icons.opacity,
-                                      title:
-                                          ingredient['name']?.toString() ??
-                                          'Ingredient',
-                                      subtitle:
-                                          ingredient['benefit']?.toString() ??
-                                          'Supports your skin profile.',
-                                    ),
-                                  );
-                                }).toList(),
+                                ingredients
+                                    .map(
+                                      (ingredient) =>
+                                          _ingredientRecommendationCard(
+                                            ingredient,
+                                          ),
+                                    )
+                                    .toList(),
                           ),
                       ],
                     );

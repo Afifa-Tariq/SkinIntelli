@@ -5,6 +5,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 EVIDENCE_WEIGHT = {"strong": 1.0, "moderate": 0.8, "anecdotal": 0.5}
 BENEFIT_MAP = {
     "anti-acne": "Reduced acne lesion count over 4-8 weeks",
+    "antibacterial": "Fewer acne-causing bacteria on the skin",
+    "anti-inflammatory": "Calmer, less inflamed skin",
     "brightening": "Improved skin radiance and reduced dark spots over 8-12 weeks",
     "moisturizing": "Sustained skin hydration for 24+ hours",
     "barrier-repair": "Strengthened skin barrier, reduced transepidermal water loss",
@@ -14,6 +16,18 @@ BENEFIT_MAP = {
     "antioxidant": "Protection against environmental oxidative stress",
     "exfoliant": "Smoother skin texture and improved cell turnover",
     "collagen-boosting": "Firmer, more elastic skin over 8-12 weeks",
+    "cell-turnover": "Faster skin renewal and smoother texture",
+    "plumping": "Plumper, more hydrated-looking skin",
+    "humectant": "Deeper hydration by drawing moisture into the skin",
+    "wound-healing": "Faster recovery of irritated or compromised skin",
+    "occlusive": "Locked-in moisture and reduced water loss",
+    "emollient": "Softer, smoother skin texture",
+    "sebum-balancing": "Balanced oil production without over-drying",
+    "sunscreen": "Daily protection against UV damage and premature aging",
+    "anti-puffiness": "Reduced puffiness for a more refreshed look",
+    "melanin-inhibiting": "Faded dark spots and a more even tone over time",
+    "oil-absorbing": "Reduced shine and a mattified look throughout the day",
+    "purifying": "Clearer pores and reduced buildup",
 }
 
 
@@ -42,10 +56,10 @@ def get_priority(final_score: float) -> str:
 
 def _priority_reason(final_score: float) -> str:
     if final_score >= 80:
-        return f"final_score {final_score} is above HIGH threshold of 80"
+        return "An excellent match for your skin profile."
     if final_score >= 55:
-        return f"final_score {final_score} is in MEDIUM band (55-80)"
-    return f"final_score {final_score} is below 55"
+        return "A solid match for your skin profile."
+    return "A modest match — worth trying, but not a standout fit."
 
 
 def build_explanation(
@@ -121,7 +135,7 @@ def _concern_targeting(fired_rules: Sequence[Any], concerns: Sequence[str]) -> L
             ingredient_name = _value(_value(rule, "ingredient", None), "inci_name", "")
             explanation = explanation.replace("{ingredient_name}", str(ingredient_name))
             explanation = explanation.replace("{condition_value}", str(concern or "your concern"))
-            result.append(f"{str(concern).capitalize()}: {explanation} (Rule R-{_rule_id(rule):03d})")
+            result.append(f"{str(concern).capitalize()}: {explanation}")
     return result if result else ["No specific concern-targeting rules matched."]
 
 
@@ -137,9 +151,25 @@ def _safety_summary(pi_rows: Sequence[Any], allergen_ids: Sequence[int]) -> List
         cir_approved = _lookup(ingredient, "cir_approved", default=True)
         irritancy_score = _lookup(ingredient, "irritancy_score", default=0)
         base_safety_score = _lookup(ingredient, "base_safety_score", default=95)
-        summary.append(
-            f"{inci_name}: CIR-approved={cir_approved}, irritancy {irritancy_score}/5, safety score {base_safety_score}/100."
-        )
+
+        try:
+            irritancy_value = int(irritancy_score)
+        except (TypeError, ValueError):
+            irritancy_value = 0
+        if irritancy_value <= 1:
+            irritancy_label = "low irritancy"
+        elif irritancy_value <= 3:
+            irritancy_label = "moderate irritancy"
+        else:
+            irritancy_label = "higher irritancy — patch test first"
+
+        try:
+            safety_value = round(float(base_safety_score))
+        except (TypeError, ValueError):
+            safety_value = 95
+
+        approval_label = "CIR-approved" if cir_approved else "not CIR-reviewed"
+        summary.append(f"{inci_name}: {approval_label}, {irritancy_label}, safety score {safety_value}/100.")
 
     allergen_names = []
     for pi in pi_rows:
@@ -168,8 +198,10 @@ def _scientific_reasoning(fired_rules: Sequence[Any]) -> List[str]:
         ingredient_name = _value(_value(rule, "ingredient", None), "inci_name", "")
         explanation = explanation.replace("{ingredient_name}", str(ingredient_name))
         explanation = explanation.replace("{condition_value}", str(_value(rule, "condition_value", "") or ""))
-        source = str(_value(rule, "clinical_source", "") or "N/A")
-        result.append(f"R-{_rule_id(rule):03d}: {explanation} [Source: {source}]")
+        if not explanation:
+            continue
+        source = str(_value(rule, "clinical_source", "") or "").replace("_", " ").strip()
+        result.append(f"{explanation} (Source: {source})" if source else explanation)
     return result
 
 
@@ -193,10 +225,20 @@ def _lookup(value: Any, key: str, default: Any = None) -> Any:
 def _confidence_breakdown(fired_rules: Sequence[Any], final_score: float, confidence: int) -> str:
     boost_rules = [rule for rule in fired_rules if str(_value(rule, "effect", "")).upper() in {"BOOST", "ALLOW"}]
     if not boost_rules:
-        return "No boost rules fired — neutral confidence."
-    total_weight = sum(EVIDENCE_WEIGHT.get(str(_value(rule, "evidence_level", "moderate") or "moderate").lower(), 0.5) for rule in boost_rules)
-    max_weight = float(len(boost_rules))
-    return f"{len(boost_rules)} boost rules fired. Evidence weight ratio: {total_weight:.1f}/{max_weight:.1f}. Confidence: {confidence}%"
+        return f"No ingredients were specifically matched to your profile, so this is a general suggestion ({confidence}% confidence)."
+
+    total = len(boost_rules)
+    strong = sum(1 for rule in boost_rules if str(_value(rule, "evidence_level", "moderate") or "moderate").lower() == "strong")
+    match_word = "match" if total == 1 else "matches"
+
+    if strong == total:
+        evidence_note = "all backed by strong clinical evidence"
+    elif strong > 0:
+        evidence_note = f"{strong} of {total} backed by strong clinical evidence"
+    else:
+        evidence_note = "backed by moderate-strength evidence"
+
+    return f"{total} ingredient {match_word} found for your profile, {evidence_note}. Confidence: {confidence}%."
 
 
 def _rule_id(rule: Any) -> Optional[int]:

@@ -145,6 +145,11 @@ class RecommendationEngine:
                 pi.concentration,
                 ing.inci_name AS ingredient_inci_name,
                 ing.common_name AS ingredient_common_name,
+                ing.category AS ingredient_category,
+                ing.comedogenic_score AS ingredient_comedogenic_score,
+                ing.irritancy_score AS ingredient_irritancy_score,
+                ing.base_safety_score AS ingredient_base_safety_score,
+                ing.cir_approved AS ingredient_cir_approved,
                 ir.rule_id,
                 ir.rule_name,
                 ir.condition_type,
@@ -153,6 +158,7 @@ class RecommendationEngine:
                 ir.effect_magnitude,
                 ir.priority,
                 ir.evidence_level,
+                ir.clinical_source,
                 ir.explanation_template
             FROM products p
             LEFT JOIN product_ingredients pi ON pi.product_id = p.product_id
@@ -190,6 +196,11 @@ class RecommendationEngine:
                         "concentration": row.get("concentration"),
                         "inci_name": row.get("ingredient_inci_name"),
                         "common_name": row.get("ingredient_common_name"),
+                        "category": row.get("ingredient_category"),
+                        "comedogenic_score": row.get("ingredient_comedogenic_score"),
+                        "irritancy_score": row.get("ingredient_irritancy_score"),
+                        "base_safety_score": row.get("ingredient_base_safety_score"),
+                        "cir_approved": row.get("ingredient_cir_approved"),
                     }
                 )
 
@@ -206,6 +217,7 @@ class RecommendationEngine:
                             "effect_magnitude": float(row.get("effect_magnitude") or 0.0),
                             "priority": row.get("priority"),
                             "evidence_level": row.get("evidence_level"),
+                            "clinical_source": row.get("clinical_source"),
                             "explanation_template": row.get("explanation_template"),
                             "ingredient_id": row.get("ingredient_id"),
                         }
@@ -287,9 +299,26 @@ class RecommendationEngine:
 
         return {"conflicts": matching_conflicts, "is_blocked": False, "block_reason": None}
 
-    def _build_ingredient_list(self, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _build_ingredient_list(
+        self, products: List[Dict[str, Any]], limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         seen = set()
-        ingredients: List[Dict[str, Any]] = []
+        # Tier 0: ingredients boosted specifically for one of the user's
+        # named concerns (the strongest, most relevant match). Tier 1:
+        # boosted only via a skin-type match. Tier 2: no matched rule at
+        # all, described from its general known functions instead.
+        tiers: List[List[Dict[str, Any]]] = [[], [], []]
+
+        ingredient_ids = sorted(
+            {
+                int(ingredient["ingredient_id"])
+                for product in products
+                for ingredient in product.get("ingredients", [])
+                if ingredient.get("ingredient_id") is not None
+            }
+        )
+        functions_map = self._load_ingredient_functions_map(ingredient_ids)
+
         for product in products:
             boost_rules = [
                 rule
@@ -308,27 +337,63 @@ class RecommendationEngine:
                 inci_name = str(ingredient.get("inci_name") or "").strip()
                 common_name = str(ingredient.get("common_name") or "").strip()
                 name = inci_name if inci_name else common_name if common_name else f"Ingredient {ingredient_id}"
-                benefit = None
-                for rule in boost_rules:
-                    try:
-                        if int(rule.get("ingredient_id") or 0) == ingredient_id:
-                            benefit = rule.get("rule_name") or rule.get("explanation_template")
-                            if benefit:
-                                break
-                    except (TypeError, ValueError):
-                        continue
                 key = (ingredient_id, name)
-                if key not in seen:
-                    seen.add(key)
-                    ingredients.append(
-                        {
-                            "ingredient_id": ingredient_id,
-                            "name": name,
-                            "common_name": common_name,
-                            "benefit": benefit or "Supports your skin profile.",
-                        }
+                if key in seen:
+                    continue
+
+                matched_rules = [
+                    rule for rule in boost_rules if int(rule.get("ingredient_id") or 0) == ingredient_id
+                ]
+                concern_rule = next(
+                    (rule for rule in matched_rules if str(rule.get("condition_type") or "").lower() == "concern"),
+                    None,
+                )
+                best_rule = concern_rule or (matched_rules[0] if matched_rules else None)
+                function_labels = [_humanize_function(fn) for fn in functions_map.get(ingredient_id, [])]
+
+                if best_rule:
+                    benefit = str(
+                        best_rule.get("explanation_template") or best_rule.get("rule_name") or ""
+                    ).strip() or "Supports your skin's needs."
+                    evidence_level = str(best_rule.get("evidence_level") or "moderate").lower()
+                    source = _format_source(best_rule.get("clinical_source"))
+                    if concern_rule:
+                        why_recommended = f"Targets your {concern_rule.get('condition_value')} concern"
+                        tier = 0
+                    else:
+                        why_recommended = f"Well-suited to {best_rule.get('condition_value')} skin"
+                        tier = 1
+                else:
+                    benefit = (
+                        f"Known for {function_labels[0].lower()} benefits."
+                        if function_labels
+                        else "A supporting ingredient in this product."
                     )
-        return ingredients
+                    why_recommended = "General skincare support"
+                    evidence_level = None
+                    source = None
+                    tier = 2
+
+                seen.add(key)
+                tiers[tier].append(
+                    {
+                        "ingredient_id": ingredient_id,
+                        "name": name,
+                        "common_name": common_name,
+                        "category": _humanize_category(ingredient.get("category")),
+                        "functions": function_labels,
+                        "benefit": benefit,
+                        "why_recommended": why_recommended,
+                        "evidence_level": evidence_level,
+                        "source": source,
+                        "safety_note": _safety_note(ingredient),
+                    }
+                )
+
+        ordered = tiers[0] + tiers[1] + tiers[2]
+        if limit:
+            ordered = ordered[:limit]
+        return ordered
 
     def aggregate_score(self, product: Dict[str, Any], boosts: List[Dict[str, Any]], warns: List[Dict[str, Any]]) -> float:
         base_score = float(product.get("base_score") or 0.0)
@@ -358,9 +423,9 @@ class RecommendationEngine:
                 "ingredient_id": ingredient.get("ingredient_id"),
                 "ingredient": {
                     "inci_name": ingredient.get("inci_name"),
-                    "cir_approved": True,
-                    "irritancy_score": 0,
-                    "base_safety_score": 95,
+                    "cir_approved": bool(ingredient.get("cir_approved")),
+                    "irritancy_score": ingredient.get("irritancy_score") if ingredient.get("irritancy_score") is not None else 0,
+                    "base_safety_score": ingredient.get("base_safety_score") if ingredient.get("base_safety_score") is not None else 50,
                 },
             }
             for ingredient in product.get("ingredients", [])
@@ -384,7 +449,12 @@ class RecommendationEngine:
         except Exception:
             return ""
 
-    def generate(self, user_id: int, filter: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def generate(
+        self,
+        user_id: int,
+        filter: Optional[Dict[str, Any]] = None,
+        top_n: Optional[int] = 5,
+    ) -> Dict[str, Any]:
         profile = self.load_user_profile(user_id)
         if profile is None:
             raise ValueError("NO_SKIN_PROFILE")
@@ -407,6 +477,7 @@ class RecommendationEngine:
                         "boosts": rule_result["boosts"],
                         "warns": rule_result["warns"],
                         "conflicts": [],
+                        "ingredients": candidate.get("ingredients", []),
                         "explanation": self.generate_explanation(candidate, matched_rules, [], profile),
                         "rank": None,
                         "block_source": "rule",
@@ -426,6 +497,7 @@ class RecommendationEngine:
                         "boosts": rule_result["boosts"],
                         "warns": rule_result["warns"],
                         "conflicts": conflict_result["conflicts"],
+                        "ingredients": candidate.get("ingredients", []),
                         "explanation": self.generate_explanation(candidate, matched_rules, conflict_result["conflicts"], profile),
                         "rank": None,
                         "block_source": "conflict",
@@ -445,21 +517,30 @@ class RecommendationEngine:
                     "boosts": rule_result["boosts"],
                     "warns": rule_result["warns"],
                     "conflicts": conflict_result["conflicts"],
+                    "ingredients": candidate.get("ingredients", []),
                     "explanation": explanation,
                     "rank": None,
                     "block_source": None,
                 }
             )
 
-        ranked_products = [product for product in evaluated_products if not product["is_blocked"] or product.get("block_source") != "conflict"]
-        ranked_products.sort(key=lambda item: item["final_score"], reverse=True)
-        for index, product in enumerate(ranked_products, start=1):
+        # Blocked products (hard rule/allergy/conflict blocks) are exclusions,
+        # not recommendations, so they never enter the ranked/returned list.
+        # They're still recorded in full below for audit/explainability.
+        viable_products = [product for product in evaluated_products if not product["is_blocked"]]
+        # Products that address one of the user's named concerns (not just a
+        # generic skin-type/base-score match) are the "best for the specific
+        # concern" — they always outrank products that merely score well.
+        viable_products.sort(
+            key=lambda item: (len(_matched_concern_labels(item)), item["final_score"]),
+            reverse=True,
+        )
+        for index, product in enumerate(viable_products, start=1):
             product["rank"] = index
+            product["matched_concerns"] = _matched_concern_labels(product)
 
-        recommended_products = [
-            product for product in ranked_products if not product["is_blocked"]
-        ]
-        ingredients = self._build_ingredient_list(recommended_products)
+        best_matches = viable_products[:top_n] if top_n else viable_products
+        ingredients = self._build_ingredient_list(best_matches, limit=top_n)
 
         record_id = self._persist_result(user_id, profile.profile_id if profile else None, filter, len(candidates), evaluated_products)
         response_products = [
@@ -469,10 +550,10 @@ class RecommendationEngine:
                 "final_score": round(product["final_score"], 2),
                 "is_blocked": product["is_blocked"],
                 "rank": product["rank"],
+                "matched_concerns": product.get("matched_concerns", []),
                 "explanation": product["explanation"],
             }
-            for product in evaluated_products
-            if not product["is_blocked"] or product.get("block_source") != "conflict"
+            for product in best_matches
         ]
         return {
             "record_id": record_id,
@@ -500,6 +581,16 @@ class RecommendationEngine:
         params = {f"ingredient_{index}": ingredient_id for index, ingredient_id in enumerate(ingredient_ids)}
         rows = db.session.execute(query, params).mappings().all()
         return [{"ingredient_id": row.get("ingredient_id"), "function_name": row.get("function_name")} for row in rows]
+
+    def _load_ingredient_functions_map(self, ingredient_ids: List[int]) -> Dict[int, List[str]]:
+        result: Dict[int, List[str]] = {}
+        for row in self._load_ingredient_functions(ingredient_ids):
+            ingredient_id = row.get("ingredient_id")
+            function_name = row.get("function_name")
+            if ingredient_id is None or not function_name:
+                continue
+            result.setdefault(int(ingredient_id), []).append(function_name)
+        return result
 
     def _persist_result(
         self,
@@ -615,6 +706,97 @@ def aggregate_score(product: Dict[str, Any], boosts: List[Dict[str, Any]], warns
 
 def _normalize_value(value: Any) -> str:
     return str(value or "").strip().lower()
+
+
+def _matched_concern_labels(product: Dict[str, Any]) -> List[str]:
+    labels: List[str] = []
+    for rule in product.get("boosts", []):
+        if str(rule.get("condition_type") or "").lower() != "concern":
+            continue
+        value = rule.get("condition_value")
+        if value and value not in labels:
+            labels.append(str(value))
+    return labels
+
+
+# Human-friendly labels for every ingredient_functions.function_name value
+# currently in the catalog. _humanize_function() falls back to a title-cased
+# version of any future/unmapped function name instead of dropping it.
+FUNCTION_LABELS = {
+    "anti-acne": "Anti-acne",
+    "antibacterial": "Antibacterial",
+    "exfoliant": "Exfoliating",
+    "anti-inflammatory": "Anti-inflammatory",
+    "brightening": "Brightening",
+    "sebum-regulating": "Oil control",
+    "anti-aging": "Anti-aging",
+    "cell-turnover": "Cell renewal",
+    "antioxidant": "Antioxidant",
+    "collagen-boosting": "Collagen support",
+    "moisturizing": "Hydrating",
+    "plumping": "Plumping",
+    "humectant": "Moisture-binding",
+    "soothing": "Soothing",
+    "wound-healing": "Healing support",
+    "barrier-repair": "Barrier repair",
+    "occlusive": "Moisture-sealing",
+    "emollient": "Softening",
+    "sebum-balancing": "Oil-balancing",
+    "sunscreen": "Sun protection",
+    "anti-puffiness": "De-puffing",
+    "melanin-inhibiting": "Dark spot fading",
+    "oil-absorbing": "Oil-absorbing",
+    "purifying": "Purifying",
+}
+
+
+def _humanize_function(function_name: Any) -> str:
+    key = str(function_name or "").strip().lower()
+    if key in FUNCTION_LABELS:
+        return FUNCTION_LABELS[key]
+    humanized = key.replace("-", " ").replace("_", " ").strip().title()
+    return humanized or "Skincare support"
+
+
+def _humanize_category(category: Any) -> Optional[str]:
+    if not category:
+        return None
+    return str(category).replace("_", " ").strip().title()
+
+
+def _format_source(clinical_source: Any) -> Optional[str]:
+    if not clinical_source:
+        return None
+    return str(clinical_source).replace("_", " ").strip()
+
+
+def _safety_note(ingredient: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    if ingredient.get("cir_approved"):
+        parts.append("CIR-approved")
+
+    irritancy = ingredient.get("irritancy_score")
+    if irritancy is not None:
+        try:
+            irritancy_value = int(irritancy)
+            if irritancy_value <= 1:
+                label = "low irritancy risk"
+            elif irritancy_value <= 3:
+                label = "moderate irritancy risk"
+            else:
+                label = "higher irritancy risk — patch test first"
+            parts.append(label)
+        except (TypeError, ValueError):
+            pass
+
+    safety_score = ingredient.get("base_safety_score")
+    if safety_score is not None:
+        try:
+            parts.append(f"safety score {round(float(safety_score))}/100")
+        except (TypeError, ValueError):
+            pass
+
+    return " · ".join(parts) if parts else "Standard safety profile."
 
 
 def _compare_sensitivity(profile_level: Optional[str], condition_value: Any) -> bool:

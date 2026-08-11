@@ -11,3 +11,4 @@ python-dotenv
 PyMySQL
 cryptography
 google-genai
+Pillow
