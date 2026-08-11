@@ -2,8 +2,12 @@ part of 'package:skinintelli/main.dart';
 
 extension ScheduleScreenWidgets on _SkinIntelAppState {
   Future<Map<String, dynamic>> _loadRoutinePayload() async {
+    // No category filter: a real routine needs cleanser/toner/serum/
+    // moisturizer/sunscreen, not just one category, so pull the system's
+    // full top recommendations and let the routine engine categorize and
+    // time each one (AM/PM, step order) below.
     final recommendationsResponse = await ApiService.getRecommendations(
-      filter: {'category': 'serum'},
+      topN: 8,
     );
 
     if (recommendationsResponse['statusCode'] != 200 ||
@@ -349,99 +353,15 @@ extension ScheduleScreenWidgets on _SkinIntelAppState {
                           else
                             Column(
                               children:
-                                  morningSteps.map((task) {
-                                    final name =
-                                        task['product']?.toString() ??
-                                        'Product';
-                                    final reminder =
-                                        task['reminder']?.toString();
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.card,
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          border: Border.all(
-                                            color: AppTheme.border,
-                                          ),
+                                  morningSteps
+                                      .map(
+                                        (task) => _scheduleStepCard(
+                                          task,
+                                          accentColor: AppTheme.primary,
+                                          icon: Icons.stars,
                                         ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 20,
-                                              height: 20,
-                                              decoration: BoxDecoration(
-                                                color: Colors.transparent,
-                                                border: Border.all(
-                                                  color: AppTheme.border,
-                                                  width: 2,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Container(
-                                              width: 32,
-                                              height: 32,
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primary
-                                                    .withAlpha(
-                                                      (0.1 * 255).round(),
-                                                    ),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: const Icon(
-                                                Icons.stars,
-                                                color: AppTheme.primary,
-                                                size: 16,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    name,
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color:
-                                                          AppTheme.foreground,
-                                                    ),
-                                                  ),
-                                                  if (reminder != null &&
-                                                      reminder.isNotEmpty)
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                            top: 4,
-                                                          ),
-                                                      child: Text(
-                                                        reminder,
-                                                        style: GoogleFonts.poppins(
-                                                          fontSize: 11.5,
-                                                          color:
-                                                              AppTheme
-                                                                  .mutedForeground,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
+                                      )
+                                      .toList(),
                             ),
                           const SizedBox(height: 20),
                           Row(
@@ -506,99 +426,15 @@ extension ScheduleScreenWidgets on _SkinIntelAppState {
                           else
                             Column(
                               children:
-                                  nightSteps.map((task) {
-                                    final name =
-                                        task['product']?.toString() ??
-                                        'Product';
-                                    final reminder =
-                                        task['reminder']?.toString();
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.card,
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          border: Border.all(
-                                            color: AppTheme.border,
-                                          ),
+                                  nightSteps
+                                      .map(
+                                        (task) => _scheduleStepCard(
+                                          task,
+                                          accentColor: const Color(0xFF4F46E5),
+                                          icon: Icons.nightlight_round,
                                         ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 20,
-                                              height: 20,
-                                              decoration: BoxDecoration(
-                                                color: Colors.transparent,
-                                                border: Border.all(
-                                                  color: AppTheme.border,
-                                                  width: 2,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Container(
-                                              width: 32,
-                                              height: 32,
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primary
-                                                    .withAlpha(
-                                                      (0.1 * 255).round(),
-                                                    ),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: const Icon(
-                                                Icons.nightlight_round,
-                                                color: AppTheme.primary,
-                                                size: 16,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    name,
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color:
-                                                          AppTheme.foreground,
-                                                    ),
-                                                  ),
-                                                  if (reminder != null &&
-                                                      reminder.isNotEmpty)
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                            top: 4,
-                                                          ),
-                                                      child: Text(
-                                                        reminder,
-                                                        style: GoogleFonts.poppins(
-                                                          fontSize: 11.5,
-                                                          color:
-                                                              AppTheme
-                                                                  .mutedForeground,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
+                                      )
+                                      .toList(),
                             ),
                         ],
                       ),

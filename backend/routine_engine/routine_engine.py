@@ -42,6 +42,11 @@ STEP_ORDER = {
 }
 
 
+def _humanize_category(category: Any) -> str:
+    text_value = str(category or "").replace("_", " ").strip()
+    return text_value.title() if text_value else "Product"
+
+
 def _get_product(product_id: int) -> Optional[Any]:
     return db.session.execute(text("SELECT * FROM products WHERE product_id = :product_id"), {"product_id": product_id}).mappings().first()
 
@@ -142,7 +147,15 @@ def generate_routine(user_id: int, profile_id: int, recommendations: Sequence[Di
                 "notes": note,
             },
         )
-        routine_items_data.append({"step": step_order, "time": "AM", "product": product.get("name") if isinstance(product, dict) else product["name"], "reminder": note})
+        routine_items_data.append(
+            {
+                "step": step_order,
+                "time": "AM",
+                "product": product.get("name") if isinstance(product, dict) else product["name"],
+                "category": _humanize_category(product.get("category") if isinstance(product, dict) else product["category"]),
+                "reminder": note,
+            }
+        )
 
     for step, (product, ing_names) in enumerate(pm_slots, start=1):
         step_order = step
@@ -162,7 +175,15 @@ def generate_routine(user_id: int, profile_id: int, recommendations: Sequence[Di
                 "notes": note,
             },
         )
-        routine_items_data.append({"step": step_order, "time": "PM", "product": product.get("name") if isinstance(product, dict) else product["name"], "reminder": note})
+        routine_items_data.append(
+            {
+                "step": step_order,
+                "time": "PM",
+                "product": product.get("name") if isinstance(product, dict) else product["name"],
+                "category": _humanize_category(product.get("category") if isinstance(product, dict) else product["category"]),
+                "reminder": note,
+            }
+        )
 
     db.session.commit()
 

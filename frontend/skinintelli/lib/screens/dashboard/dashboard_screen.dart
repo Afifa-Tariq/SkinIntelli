@@ -209,20 +209,36 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                CircularProgressIndicator(
-                                  value: 0.9,
-                                  strokeWidth: 11,
-                                  color: AppTheme.accent,
-                                  backgroundColor: AppTheme.primary.withAlpha(
-                                    (0.15 * 255).round(),
+                                SizedBox(
+                                  width: 120,
+                                  height: 120,
+                                  child: CircularProgressIndicator(
+                                    value: 0.9,
+                                    strokeWidth: 12,
+                                    strokeCap: StrokeCap.round,
+                                    color: AppTheme.accent,
+                                    backgroundColor: AppTheme.primary
+                                        .withAlpha((0.12 * 255).round()),
                                   ),
                                 ),
-                                Text(
-                                  '90%',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primary,
+                                // Constrained + FittedBox so the percentage
+                                // always stays inside the ring instead of
+                                // spilling outside it (e.g. under larger
+                                // device text-scale settings).
+                                SizedBox(
+                                  width: 76,
+                                  height: 76,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      '90%',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.foreground,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],

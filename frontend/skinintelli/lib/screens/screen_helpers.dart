@@ -806,4 +806,139 @@ extension ScreenHelpers on _SkinIntelAppState {
       ),
     );
   }
+
+  /// A single step in the weekly schedule's AM/PM routine: which step
+  /// number it is, what category of product it is, when to use it, the
+  /// product name, and any care reminder attached to it.
+  Widget _scheduleStepCard(
+    Map<String, dynamic> task, {
+    required Color accentColor,
+    required IconData icon,
+  }) {
+    final name = task['product']?.toString() ?? 'Product';
+    final reminder = task['reminder']?.toString();
+    final category = task['category']?.toString();
+    final step = task['step'];
+    final time = task['time']?.toString();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                border: Border.all(color: AppTheme.border, width: 2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: accentColor.withAlpha((0.1 * 255).round()),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: accentColor, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      if (step != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentColor.withAlpha((0.12 * 255).round()),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Step $step',
+                            style: GoogleFonts.poppins(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: accentColor,
+                            ),
+                          ),
+                        ),
+                      if (category != null && category.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.background,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Text(
+                            category,
+                            style: GoogleFonts.poppins(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedForeground,
+                            ),
+                          ),
+                        ),
+                      if (time != null && time.isNotEmpty)
+                        Text(
+                          time,
+                          style: GoogleFonts.poppins(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.foreground,
+                    ),
+                  ),
+                  if (reminder != null && reminder.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        reminder,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: AppTheme.mutedForeground,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

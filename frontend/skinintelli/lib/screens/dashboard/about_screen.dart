@@ -26,9 +26,9 @@ extension AboutScreenWidgets on _SkinIntelAppState {
     ];
 
     final members = [
-      {'name': 'Dr. Sarah Johnson', 'role': 'Dermatologist Advisor'},
-      {'name': 'Alex Chen', 'role': 'Lead Developer'},
-      {'name': 'Maria Garcia', 'role': 'UX Designer'},
+      {'name': 'Ms. Amina Saba', 'role': 'Project Supervisor'},
+      {'name': 'Afifa Tariq', 'role': 'Developer'},
+      {'name': 'Zarsh Sohail Sindhu', 'role': 'UX Designer'},
     ];
 
     return Scaffold(
@@ -106,7 +106,7 @@ extension AboutScreenWidgets on _SkinIntelAppState {
                 _buildLinkItem(
                   icon: Icons.mail_outline,
                   label: 'Email Us',
-                  subtitle: 'support@skinintel.com',
+                  subtitle: 'afifatariq489@gmail.com',
                   onTap: () {},
                 ),
                 _buildLinkItem(

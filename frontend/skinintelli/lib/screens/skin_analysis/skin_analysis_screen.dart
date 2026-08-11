@@ -127,7 +127,7 @@ class _SkinAnalysisFlowScreenState extends State<_SkinAnalysisFlowScreen> {
                     : 'selfie.jpg',
               ),
             )
-            ..fields['top_n'] = '10';
+            ..fields['top_n'] = '5';
 
       final streamedResponse = await request.send().timeout(
         const Duration(seconds: 30),

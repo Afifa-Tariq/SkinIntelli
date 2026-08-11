@@ -232,11 +232,15 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getRecommendations({
     Map<String, dynamic>? filter,
+    int? topN,
   }) => _safeRequest(
     () => http.post(
       Uri.parse('${AppTheme.backendBaseUrl}/api/recommendations/generate'),
       headers: authHeaders,
-      body: jsonEncode({'filter': filter}),
+      body: jsonEncode({
+        'filter': filter,
+        if (topN != null) 'top_n': topN,
+      }),
     ),
   );
 
