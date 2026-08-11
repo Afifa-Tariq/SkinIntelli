@@ -11,7 +11,13 @@ extension ProfileSetupScreenWidgets on _SkinIntelAppState {
             elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios, color: AppTheme.primary),
-              onPressed: () => setState(() => currentScreen = Screen.signup),
+              onPressed: () {
+                if (currentScreen == Screen.profile) {
+                  _goToDashboard();
+                  return;
+                }
+                setState(() => currentScreen = Screen.signup);
+              },
             ),
             title: stepIndicator(current: 1, total: 2),
             centerTitle: true,

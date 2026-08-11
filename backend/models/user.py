@@ -32,6 +32,19 @@ class User(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    analysis_sessions = db.relationship(
+        "SkinAnalysisSession",
+        back_populates="user",
+        order_by="SkinAnalysisSession.created_at.desc()",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    user_images = db.relationship(
+        "UserImage",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def set_password(self, plain: str) -> None:
         self.password_hash = bcrypt.generate_password_hash(plain).decode("utf-8")

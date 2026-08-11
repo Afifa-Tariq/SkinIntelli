@@ -491,6 +491,26 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                           ),
                           const SizedBox(height: 10),
                           _drawerItem(
+                            Icons.calendar_month,
+                            'Appointments',
+                            currentScreen == Screen.appointments,
+                            () => setState(() {
+                              currentScreen = Screen.appointments;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
+                            Icons.feedback_outlined,
+                            'Feedback',
+                            currentScreen == Screen.feedback,
+                            () => setState(() {
+                              currentScreen = Screen.feedback;
+                              menuOpen = false;
+                            }),
+                          ),
+                          const SizedBox(height: 10),
+                          _drawerItem(
                             Icons.settings,
                             'Settings',
                             currentScreen == Screen.profile,

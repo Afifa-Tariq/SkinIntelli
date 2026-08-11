@@ -12,6 +12,7 @@ from extensions import bcrypt, db, jwt, limiter, mail, cors
 from models import TokenBlocklist
 from recommendation_engine.recommendation import recommendation_bp
 from routine_engine.routine import routine_bp
+from skin_analysis import skin_analysis_bp
 from skin_profile import skin_profile_bp
 from user import user_bp
 
@@ -53,6 +54,7 @@ def create_app():
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(skin_analysis_bp)
     app.register_blueprint(skin_profile_bp)
     app.register_blueprint(recommendation_bp)
     app.register_blueprint(routine_bp)

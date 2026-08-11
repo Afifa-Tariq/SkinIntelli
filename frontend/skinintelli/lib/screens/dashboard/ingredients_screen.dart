@@ -18,7 +18,7 @@ extension IngredientsScreenWidgets on _SkinIntelAppState {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
-                      onTap: () => setState(() => menuOpen = true),
+                      onTap: _goToDashboard,
                       child: Container(
                         width: 52,
                         height: 52,
@@ -27,7 +27,10 @@ extension IngredientsScreenWidgets on _SkinIntelAppState {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AppTheme.border),
                         ),
-                        child: const Icon(Icons.menu, color: Colors.black87),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
                     Column(
@@ -158,174 +161,6 @@ extension IngredientsScreenWidgets on _SkinIntelAppState {
               ],
             ),
           ),
-
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            top: 0,
-            bottom: 0,
-            left: menuOpen ? 0 : -280,
-            child: SizedBox(
-              width: 280,
-              child: Material(
-                elevation: 16,
-                color: AppTheme.card,
-                child: SafeArea(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 20,
-                        horizontal: 16,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: AppTheme.primary,
-                                child: const Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _userFullName.isNotEmpty
-                                          ? _userFullName
-                                          : 'User',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppTheme.primary,
-                                      ),
-                                    ),
-                                    Text(
-                                      registeredEmail,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        color: AppTheme.mutedForeground,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed:
-                                    () => setState(() => menuOpen = false),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          _drawerItem(
-                            Icons.dashboard,
-                            'Dashboard',
-                            currentScreen == Screen.dashboard,
-                            () => setState(() {
-                              currentScreen = Screen.dashboard;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 10),
-                          _drawerItem(
-                            Icons.schedule,
-                            'My Schedule',
-                            currentScreen == Screen.schedule,
-                            () => setState(() {
-                              currentScreen = Screen.schedule;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 10),
-                          _drawerItem(
-                            Icons.grass,
-                            'Ingredients',
-                            currentScreen == Screen.ingredients,
-                            () => setState(() {
-                              currentScreen = Screen.ingredients;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 10),
-                          _drawerItem(
-                            Icons.inventory_2,
-                            'Products',
-                            currentScreen == Screen.products,
-                            () => setState(() {
-                              currentScreen = Screen.products;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 10),
-                          _drawerItem(
-                            Icons.settings,
-                            'Recommendations',
-                            currentScreen == Screen.skinProfile,
-                            () => setState(() {
-                              currentScreen = Screen.skinProfile;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 10),
-                          _drawerItem(
-                            Icons.settings,
-                            'Settings',
-                            currentScreen == Screen.profile,
-                            () => setState(() {
-                              currentScreen = Screen.profile;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 10),
-                          _drawerItem(
-                            Icons.info_outline,
-                            'About',
-                            currentScreen == Screen.about,
-                            () => setState(() {
-                              currentScreen = Screen.about;
-                              menuOpen = false;
-                            }),
-                          ),
-                          const SizedBox(height: 20),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: ElevatedButton(
-                              onPressed: () => setState(() => menuOpen = false),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primary,
-                                minimumSize: const Size(double.infinity, 52),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: const Text(
-                                'Close',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (menuOpen)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => setState(() => menuOpen = false),
-                child: Container(
-                  color: Colors.black.withAlpha((0.35 * 255).round()),
-                ),
-              ),
-            ),
         ],
       ),
     );

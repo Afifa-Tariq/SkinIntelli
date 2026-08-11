@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 import 'services/api_service.dart';
 import 'utils/constants.dart';
@@ -20,6 +24,8 @@ part 'screens/onboarding/profile_setup_screen.dart';
 part 'screens/onboarding/preferences_screen.dart';
 part 'screens/onboarding/success_screen.dart';
 part 'screens/onboarding/questionnaire_screens.dart';
+part 'screens/skin_analysis/skin_analysis_screen.dart';
+part 'screens/skin_analysis/camera_capture_screen.dart';
 part 'screens/dashboard/dashboard_screen.dart';
 part 'screens/dashboard/schedule_screen.dart';
 part 'screens/dashboard/skin_profile_screen.dart';
@@ -27,6 +33,8 @@ part 'screens/dashboard/ingredients_screen.dart';
 part 'screens/dashboard/products_screen.dart';
 part 'screens/dashboard/about_screen.dart';
 part 'screens/dashboard/skin_profile.dart';
+part 'screens/dashboard/appointments_screen.dart';
+part 'screens/dashboard/feedback_screen.dart';
 part 'screens/screen_helpers.dart';
 
 void main() {
@@ -40,6 +48,7 @@ enum Screen {
   verifyEmail,
   profileSetup,
   preferences,
+  skinAnalysis,
   success,
   qSkinType,
   qSkinConcerns,
@@ -58,6 +67,8 @@ enum Screen {
   ingredients,
   products,
   about,
+  appointments,
+  feedback,
 }
 
 class SkinIntelApp extends StatefulWidget {
@@ -250,6 +261,22 @@ class _SkinIntelAppState extends State<SkinIntelApp>
 
   void _setLoading(bool value) {
     if (mounted) setState(() => isLoading = value);
+  }
+
+  void _goToDashboard() {
+    if (!mounted) return;
+    setState(() {
+      menuOpen = false;
+      currentScreen = Screen.dashboard;
+    });
+  }
+
+  void _goToScreen(Screen screen) {
+    if (!mounted) return;
+    setState(() {
+      menuOpen = false;
+      currentScreen = screen;
+    });
   }
 
   void _showMessage(String message, {bool isError = false}) {
@@ -654,6 +681,8 @@ class _SkinIntelAppState extends State<SkinIntelApp>
         return _profileSetupScreen();
       case Screen.preferences:
         return _preferencesScreen();
+      case Screen.skinAnalysis:
+        return _skinAnalysisScreen();
       case Screen.success:
         return _successScreen();
       case Screen.qSkinType:
@@ -690,6 +719,10 @@ class _SkinIntelAppState extends State<SkinIntelApp>
         return _productsScreen();
       case Screen.about:
         return _aboutScreen();
+      case Screen.appointments:
+        return _appointmentsScreen();
+      case Screen.feedback:
+        return _feedbackScreen();
     }
   }
 }

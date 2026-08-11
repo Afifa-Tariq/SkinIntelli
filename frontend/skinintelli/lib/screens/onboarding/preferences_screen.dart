@@ -93,10 +93,9 @@ extension PreferencesScreenWidgets on _SkinIntelAppState {
                     onPressed:
                         selectedGoals.isEmpty
                             ? null
-                            : () {
-                              _startSuccessTimer();
-                              setState(() => currentScreen = Screen.success);
-                            },
+                            : () => setState(
+                              () => currentScreen = Screen.skinAnalysis,
+                            ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       minimumSize: const Size(double.infinity, 56),
@@ -106,7 +105,7 @@ extension PreferencesScreenWidgets on _SkinIntelAppState {
                     ),
                     child: const Text(
                       'Finish Setup',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
                 ],

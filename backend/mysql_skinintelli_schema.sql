@@ -60,7 +60,36 @@ CREATE TABLE IF NOT EXISTS skin_profiles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- TABLE 4: skin_concerns
+-- TABLE 4: user_images
+-- Stores uploaded or camera-captured images for a user analysis session.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_images (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    session_id INT NULL,
+    profile_id INT NULL,
+    filename VARCHAR(255) NOT NULL,
+    content_type VARCHAR(100),
+    source VARCHAR(20) NOT NULL DEFAULT 'upload',
+    image_bytes LONGBLOB NOT NULL,
+    image_size INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_user_images_user FOREIGN KEY (user_id)
+        REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_images_session FOREIGN KEY (session_id)
+        REFERENCES skin_analysis_sessions(id) ON DELETE SET NULL,
+    CONSTRAINT fk_user_images_profile FOREIGN KEY (profile_id)
+        REFERENCES skin_profiles(id) ON DELETE SET NULL,
+
+    INDEX idx_user_images_user_id (user_id),
+    INDEX idx_user_images_session_id (session_id),
+    INDEX idx_user_images_profile_id (profile_id),
+    INDEX idx_user_images_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- TABLE 5: skin_concerns
 -- Normalized multi-value table for user skin concerns.
 -- A user can have multiple concerns (acne, eczema, aging, etc.).
 -- ============================================================================

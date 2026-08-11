@@ -10,3 +10,4 @@ flask-limiter
 python-dotenv
 PyMySQL
 cryptography
+google-genai
