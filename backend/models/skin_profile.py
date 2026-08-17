@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy.dialects.mysql import LONGBLOB
+
 from extensions import db
 
 
@@ -13,7 +15,10 @@ class UserImage(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     content_type = db.Column(db.String(100), nullable=True)
     source = db.Column(db.String(20), nullable=False, default="upload")
-    image_bytes = db.Column(db.LargeBinary, nullable=False)
+    # Plain LargeBinary compiles to MySQL BLOB (64KB max) with no length
+    # given, which is far too small for a real photo. LONGBLOB matches what
+    # the original hand-written schema intended (up to 4GB).
+    image_bytes = db.Column(LONGBLOB, nullable=False)
     image_size = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
