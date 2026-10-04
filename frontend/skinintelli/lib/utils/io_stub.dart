@@ -3,6 +3,7 @@
 /// On web platforms, `dart:io` is not available. These stubs provide
 /// placeholder classes that match the `dart:io` API but are only used
 /// in non-web catch clauses.
+library;
 
 class SocketException implements Exception {
   final String message;

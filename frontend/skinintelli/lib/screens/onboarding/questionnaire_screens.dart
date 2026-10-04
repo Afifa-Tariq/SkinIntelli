@@ -471,7 +471,11 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                 ),
                 child: const Text(
                   'Continue to Dashboard',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -669,6 +673,7 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),
