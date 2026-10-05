@@ -258,6 +258,13 @@ class ApiService {
     ),
   );
 
+  static Future<Map<String, dynamic>> getActiveRoutine() => _safeRequest(
+    () => http.get(
+      Uri.parse('${AppTheme.backendBaseUrl}/api/routine/active'),
+      headers: authHeaders,
+    ),
+  );
+
   static Map<String, dynamic> _normalizeResponse(http.Response response) {
     dynamic body;
     try {

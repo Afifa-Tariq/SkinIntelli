@@ -5,10 +5,10 @@ import os
 import re
 from typing import Any, Dict, Tuple
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from google import genai
-from google.genai import errors as genai_errors
+from google.genai import errors as genai_errors, types
 from PIL import Image, UnidentifiedImageError
 
 from extensions import db
@@ -65,21 +65,47 @@ _GEMINI_MODEL_CANDIDATES = (
 )
 
 
+def _extract_output_text(response):
+    if response is None:
+        return ""
+    for attr in ("output_text", "text"):
+        value = getattr(response, attr, None)
+        if value not in (None, ""):
+            return value
+    if isinstance(response, dict):
+        return response.get("output_text") or response.get("text") or ""
+    return ""
+
+
 def _generate_with_fallback(client, image_bytes, mime_type, prompt):
     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
     last_error = None
     for model_name in _GEMINI_MODEL_CANDIDATES:
         try:
-            return client.interactions.create(
-                model=model_name,
-                input=[
-                    {"type": "text", "text": prompt},
-                    {"type": "image", "data": image_b64, "mime_type": mime_type},
-                ],
-            )
+            if hasattr(client, "interactions") and hasattr(client.interactions, "create"):
+                return client.interactions.create(
+                    model=model_name,
+                    input=[
+                        {"type": "text", "text": prompt},
+                        {"type": "image", "data": image_b64, "mime_type": mime_type},
+                    ],
+                )
+            if hasattr(client, "models") and hasattr(client.models, "generate_content"):
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        prompt,
+                        types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                    ],
+                )
+            raise AttributeError("Unsupported Gemini client API")
         except genai_errors.ClientError as exc:
             last_error = exc
             if getattr(exc, "code", None) == 404:
+                continue
+            raise
+        except AttributeError:
+            if last_error is not None:
                 continue
             raise
     raise last_error
@@ -236,7 +262,8 @@ def analyze_and_recommend_image():
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return jsonify(error="GEMINI_API_KEY is not configured."), 500
+        message = "Skin analysis is not configured on the server."
+        return jsonify(message=message, error=message), 500
 
     payload = request.get_json(silent=True) or {}
     questionnaire = payload.get("questionnaire") if isinstance(payload.get("questionnaire"), dict) else {}
@@ -249,30 +276,37 @@ def analyze_and_recommend_image():
             user = None
 
     try:
-        client = genai.Client(api_key=api_key)
+        try:
+            client = genai.Client(api_key=api_key)
 
-        prompt = (
-            "You are a skincare analysis assistant. Analyze the provided face selfie and return only valid JSON. "
-            "The JSON object must have these exact keys: "
-            "skin_type, sensitivity_level, confidence, concerns, detected_features, analysis_notes, image_quality. "
-            "Use only values appropriate for a skincare app. "
-            "concerns should be a list of strings. "
-            "detected_features should be an object with booleans such as acne, dryness, redness, pigmentation, uneven_tone, fine_lines, oiliness, texture, sensitivity, hydration. "
-            "image_quality should be 'poor', 'acceptable', or 'good'. "
-            "Do not include markdown fences or extra explanation."
-        )
+            prompt = (
+                "You are a skincare analysis assistant. Analyze the provided face selfie and return only valid JSON. "
+                "The JSON object must have these exact keys: "
+                "skin_type, sensitivity_level, confidence, concerns, detected_features, analysis_notes, image_quality. "
+                "Use only values appropriate for a skincare app. "
+                "concerns should be a list of strings. "
+                "detected_features should be an object with booleans such as acne, dryness, redness, pigmentation, uneven_tone, fine_lines, oiliness, texture, sensitivity, hydration. "
+                "image_quality should be 'poor', 'acceptable', or 'good'. "
+                "Do not include markdown fences or extra explanation."
+            )
 
-        response = _generate_with_fallback(
-            client,
-            image_bytes,
-            image_mimetype,
-            prompt,
-        )
-
-        raw_text = response.output_text or ""
-        parsed = _extract_json_from_text(raw_text)
-        if not isinstance(parsed, dict):
-            raise ValueError("Gemini returned a non-JSON response.")
+            response = _generate_with_fallback(
+                client,
+                image_bytes,
+                image_mimetype,
+                prompt,
+            )
+            raw_text = _extract_output_text(response)
+            parsed = _extract_json_from_text(raw_text)
+            if not isinstance(parsed, dict):
+                raise ValueError("Gemini returned a non-JSON response.")
+        except Exception:
+            current_app.logger.exception("Gemini skin analysis request failed")
+            db.session.rollback()
+            message = (
+                "Skin analysis is temporarily unavailable. Please try again."
+            )
+            return jsonify(message=message, error=message), 503
 
         analysis = _normalise_analysis(parsed)
         baseline_profile = {}
@@ -357,7 +391,29 @@ def analyze_and_recommend_image():
             db.session.commit()
 
         recommendations = _default_recommendations()
-        if user is not None:
+        parsed_recommendations = parsed.get("recommendations") if isinstance(parsed, dict) else None
+        if isinstance(parsed_recommendations, dict):
+            product_recs = parsed_recommendations.get("products") or []
+            ingredient_recs = parsed_recommendations.get("ingredients") or []
+            if product_recs or ingredient_recs:
+                recommendations = {
+                    "products": product_recs,
+                    "ingredients": ingredient_recs,
+                }
+        elif user is not None:
+            try:
+                engine_result = RecommendationEngine().generate(user.id, top_n=top_n or 5)
+                engine_products = engine_result.get("products") or []
+                engine_ingredients = engine_result.get("ingredients") or []
+                if engine_products or engine_ingredients:
+                    recommendations = {
+                        "products": engine_products,
+                        "ingredients": engine_ingredients,
+                    }
+            except Exception:
+                recommendations = _default_recommendations()
+
+        if user is not None and not recommendations.get("products") and not recommendations.get("ingredients"):
             try:
                 engine_result = RecommendationEngine().generate(user.id, top_n=top_n or 5)
                 engine_products = engine_result.get("products") or []
@@ -378,9 +434,13 @@ def analyze_and_recommend_image():
         }
         return jsonify(payload), 200
 
-    except Exception as exc:
+    except Exception:
+        current_app.logger.exception("Skin analysis request failed")
+        db.session.rollback()
+        message = "Unable to complete skin analysis. Please try again."
         return jsonify(
-            error=f"Gemini Vision analysis failed: {exc}",
+            message=message,
+            error=message,
             profile_id=None,
             image_quality="acceptable",
             skin_analysis={

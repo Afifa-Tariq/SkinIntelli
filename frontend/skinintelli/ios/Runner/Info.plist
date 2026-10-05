@@ -49,5 +49,9 @@
 	<string>SkinIntelli needs camera access so you can take a live selfie for skin analysis.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>SkinIntelli needs photo access so you can upload an existing image for skin analysis.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SkinIntelli needs your location to find dermatologists near you</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>SkinIntelli needs your location to find dermatologists near you</string>
 </dict>
 </plist>

@@ -217,8 +217,9 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                                     strokeWidth: 12,
                                     strokeCap: StrokeCap.round,
                                     color: AppTheme.accent,
-                                    backgroundColor: AppTheme.primary
-                                        .withAlpha((0.12 * 255).round()),
+                                    backgroundColor: AppTheme.primary.withAlpha(
+                                      (0.12 * 255).round(),
+                                    ),
                                   ),
                                 ),
                                 // Constrained + FittedBox so the percentage
@@ -312,9 +313,10 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                           ),
                           TextButton(
                             onPressed:
-                                () => setState(
-                                  () => currentScreen = Screen.schedule,
-                                ),
+                                () => setState(() {
+                                  _scheduleRoutineFuture = null;
+                                  currentScreen = Screen.schedule;
+                                }),
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: const Size(50, 28),
@@ -471,6 +473,7 @@ extension DashboardScreenWidgets on _SkinIntelAppState {
                             'My Schedule',
                             currentScreen == Screen.schedule,
                             () => setState(() {
+                              _scheduleRoutineFuture = null;
                               currentScreen = Screen.schedule;
                               menuOpen = false;
                             }),

@@ -166,3 +166,13 @@ Routes:
 - `POST /api/skin-profile` - submit a new skin profile
 - `GET /api/skin-profile` - read the latest profile for the current user
 - `GET /api/skin-profile/history` - list all saved profiles for the current user
+
+## Routine endpoints
+
+The routine module is registered with the `routine_bp` blueprint and supports personalized skincare routines.
+
+Routes:
+- `POST /api/routine/generate` - generate a routine from product recommendations and activate it for the user
+- `GET /api/routine/active` - fetch the currently active routine for the authenticated user
+- `GET /api/routine/<routine_id>` - fetch a routine by id if it belongs to the user
+- `PATCH /api/routine/<routine_id>` - update the routine name, activate/deactivate it, add items, remove items, or replace items

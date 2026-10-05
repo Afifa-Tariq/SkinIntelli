@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from extensions import db
@@ -67,8 +68,14 @@ def _get_ingredient_names(product_id: int) -> Set[str]:
 
 
 def _classify_time(product: Any, ing_names: Set[str]) -> List[str]:
-    usage_time = str(getattr(product, "usage_time", "") or "").upper()
-    category = str(getattr(product, "category", "") or "").lower()
+    usage_time = (
+        product.get("usage_time", "") if isinstance(product, dict) else getattr(product, "usage_time", "")
+    )
+    category = (
+        product.get("category", "") if isinstance(product, dict) else getattr(product, "category", "")
+    )
+    usage_time = str(usage_time or "").upper()
+    category = str(category or "").lower()
 
     if usage_time == "AM":
         return ["AM"]
@@ -95,6 +102,25 @@ def _build_reminders(ing_names: Set[str], time_of_day: str, is_new_to_routine: b
     return " | ".join(reminders) if reminders else None
 
 
+def _routine_has_updated_at_column() -> bool:
+    try:
+        result = db.session.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'routines' AND column_name = 'updated_at'"
+            )
+        ).scalar()
+        if result is not None:
+            return int(result) > 0
+    except Exception:
+        pass
+
+    try:
+        columns = db.session.execute(text("PRAGMA table_info(routines)")).mappings().all()
+        return any(row.get("name") == "updated_at" for row in columns)
+    except Exception:
+        return False
+
+
 def generate_routine(user_id: int, profile_id: int, recommendations: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     products = []
     for item in recommendations:
@@ -118,13 +144,27 @@ def generate_routine(user_id: int, profile_id: int, recommendations: Sequence[Di
     am_slots.sort(key=lambda x: STEP_ORDER.get(str(getattr(x[0], "category", "") or "").lower(), 5))
     pm_slots.sort(key=lambda x: STEP_ORDER.get(str(getattr(x[0], "category", "") or "").lower(), 5))
 
+    now = datetime.utcnow()
+    insert_columns = ["user_id", "name", "is_active", "created_at"]
+    insert_values = [":user_id", ":name", ":is_active", ":created_at"]
+    params = {
+        "user_id": user_id,
+        "name": "My Personalized Routine",
+        "is_active": True,
+        "created_at": now,
+    }
+    if _routine_has_updated_at_column():
+        insert_columns.append("updated_at")
+        insert_values.append(":updated_at")
+        params["updated_at"] = now
+
     routine_query = text(
-        """
-        INSERT INTO routines (user_id, name, is_active)
-        VALUES (:user_id, :name, :is_active)
+        f"""
+        INSERT INTO routines ({', '.join(insert_columns)})
+        VALUES ({', '.join(insert_values)})
         """
     )
-    routine_result = db.session.execute(routine_query, {"user_id": user_id, "name": "My Personalized Routine", "is_active": True})
+    routine_result = db.session.execute(routine_query, params)
     db.session.commit()
     routine_id = getattr(routine_result, "lastrowid", None) or db.session.execute(text("SELECT LAST_INSERT_ID()")).scalar()
 

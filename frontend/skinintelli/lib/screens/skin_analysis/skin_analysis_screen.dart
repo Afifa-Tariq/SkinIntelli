@@ -117,54 +117,75 @@ class _SkinAnalysisFlowScreenState extends State<_SkinAnalysisFlowScreen> {
       );
       final request =
           http.MultipartRequest('POST', uri)
-            ..headers['Authorization'] = 'Bearer ${ApiService.accessToken}'
+            ..headers.addAll(ApiService.authHeaders)
             ..files.add(
               http.MultipartFile.fromBytes(
                 'image',
                 _selectedImageBytes!,
-                filename: _selectedImage!.name.isNotEmpty
-                    ? _selectedImage!.name
-                    : 'selfie.jpg',
+                filename:
+                    _selectedImage!.name.isNotEmpty
+                        ? _selectedImage!.name
+                        : 'selfie.jpg',
               ),
             )
             ..fields['top_n'] = '5';
 
       final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 30),
-        onTimeout:
-            () => throw Exception('Request timed out. Check your connection.'),
+        const Duration(seconds: 60),
       );
 
       final response = await http.Response.fromStream(streamedResponse);
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic>) {
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } on FormatException {
+        decoded = null;
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (decoded is Map) {
           setState(() {
-            _analysisResult = data;
+            _analysisResult = Map<String, dynamic>.from(decoded);
             _isAnalyzing = false;
           });
           return;
         }
 
-        throw Exception('Unexpected server response.');
+        setState(() {
+          _errorMessage =
+              'The server returned an invalid analysis response. Please try again.';
+          _isAnalyzing = false;
+        });
+        return;
       }
 
-      final decoded = jsonDecode(response.body);
       final message =
           decoded is Map && decoded['error'] != null
               ? decoded['error'].toString()
-              : 'Analysis failed. Please try again.';
+              : decoded is Map && decoded['message'] != null
+              ? decoded['message'].toString()
+              : 'Analysis failed (${response.statusCode}). Please try again.';
 
       setState(() {
         _errorMessage = message;
         _isAnalyzing = false;
       });
-    } catch (e) {
+    } on TimeoutException catch (e) {
+      debugPrint('Skin analysis request timed out: $e');
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Connection error: ${e.toString()}';
+        _errorMessage =
+            'Connection lost. Please check your internet and try again.';
+        _isAnalyzing = false;
+      });
+    } catch (e) {
+      debugPrint('Skin analysis upload failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Connection lost. Please check your internet and try again.';
         _isAnalyzing = false;
       });
     }

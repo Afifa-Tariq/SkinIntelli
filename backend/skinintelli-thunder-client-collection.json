@@ -130,10 +130,14 @@
         "type": "json",
         "raw": {
           "skin_type": "Oily",
-          "skin_concerns": ["Acne"],
+          "skin_concerns": [
+            "Acne"
+          ],
           "allergies": "None",
           "environment": "Polluted Area",
-          "goals": ["Reduce breakouts"]
+          "goals": [
+            "Reduce breakouts"
+          ]
         }
       }
     },
@@ -156,10 +160,14 @@
         "type": "json",
         "raw": {
           "skin_type": "Oily",
-          "skin_concerns": ["Acne"],
+          "skin_concerns": [
+            "Acne"
+          ],
           "allergies": "None",
           "environment": "Polluted Area",
-          "goals": ["Reduce breakouts"]
+          "goals": [
+            "Reduce breakouts"
+          ]
         }
       }
     },
@@ -193,6 +201,99 @@
       "body": {
         "type": "none",
         "raw": ""
+      }
+    },
+    {
+      "_id": "req-generate-routine",
+      "name": "Generate Routine",
+      "url": "{{baseUrl}}/api/routine/generate",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "******"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "recommendations": [
+            {
+              "product_id": 1,
+              "is_blocked": false
+            },
+            {
+              "product_id": 2,
+              "is_blocked": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "_id": "req-get-active-routine",
+      "name": "Get Active Routine",
+      "url": "{{baseUrl}}/api/routine/active",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "******"
+        }
+      ],
+      "body": {
+        "type": "none",
+        "raw": ""
+      }
+    },
+    {
+      "_id": "req-get-routine-by-id",
+      "name": "Get Routine by Id",
+      "url": "{{baseUrl}}/api/routine/1",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "******"
+        }
+      ],
+      "body": {
+        "type": "none",
+        "raw": ""
+      }
+    },
+    {
+      "_id": "req-patch-routine",
+      "name": "Patch Routine",
+      "url": "{{baseUrl}}/api/routine/1",
+      "method": "PATCH",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Authorization",
+          "value": "******"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": {
+          "name": "Updated Routine",
+          "items": [
+            {
+              "product_id": 3,
+              "time_of_day": "PM",
+              "step_order": 1,
+              "notes": "Night step"
+            }
+          ]
+        }
       }
     }
   ]

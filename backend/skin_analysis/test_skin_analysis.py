@@ -73,7 +73,7 @@ class SkinAnalysisImageWorkflowTests(unittest.TestCase):
             )
             db.session.add(self.user)
             db.session.commit()
-            self.token = create_access_token(identity=self.user.id)
+            self.token = create_access_token(identity=str(self.user.id))
 
     def tearDown(self):
         with self.app.app_context():
@@ -151,6 +151,22 @@ class SkinAnalysisImageWorkflowTests(unittest.TestCase):
             self.assertIsNotNone(stored_image)
             self.assertEqual(stored_image.image_bytes, b"fake-image-bytes")
             self.assertEqual(stored_image.filename, "face.jpg")
+
+    def test_gemini_failure_returns_json_without_crashing(self):
+        with patch(
+            "skin_analysis.genai.Client",
+            side_effect=RuntimeError("Gemini is unavailable"),
+        ):
+            response = self.client.post(
+                "/api/skin/analyze-and-recommend",
+                data={"image": (io.BytesIO(b"fake-image-bytes"), "face.jpg")},
+                headers={"Authorization": f"Bearer {self.token}"},
+            )
+
+        self.assertEqual(response.status_code, 503)
+        body = response.get_json()
+        self.assertIsInstance(body["message"], str)
+        self.assertEqual(body["message"], body["error"])
 
 
 if __name__ == "__main__":

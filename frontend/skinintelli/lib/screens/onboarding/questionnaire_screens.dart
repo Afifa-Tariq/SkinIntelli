@@ -160,6 +160,7 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                   ),
                   const SizedBox(height: 32),
                   TextField(
+                    controller: qAllergiesCtrl,
                     maxLines: 5,
                     onChanged: (v) => setState(() => qAllergies = v),
                     decoration: InputDecoration(
@@ -177,10 +178,16 @@ extension QuestionnaireScreenWidgets on _SkinIntelAppState {
                     children: [
                       Checkbox(
                         value: qNotSureAllergies,
-                        onChanged:
-                            (val) => setState(
-                              () => qNotSureAllergies = val ?? false,
-                            ),
+                        onChanged: (val) {
+                          final notSure = val ?? false;
+                          setState(() {
+                            qNotSureAllergies = notSure;
+                            if (notSure) {
+                              qAllergies = '';
+                              qAllergiesCtrl.clear();
+                            }
+                          });
+                        },
                         activeColor: AppTheme.primary,
                       ),
                       const Text('Not Sure', style: TextStyle(fontSize: 16)),

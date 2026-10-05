@@ -1,11 +1,124 @@
 part of 'package:skinintelli/main.dart';
 
 extension ScheduleScreenWidgets on _SkinIntelAppState {
+  Map<String, dynamic> _scheduleDataFromRoutine(
+    Map<String, dynamic> routine,
+  ) {
+    final morningSteps = <Map<String, dynamic>>[];
+    final nightSteps = <Map<String, dynamic>>[];
+    final reminders = <String>{};
+    final rawItems = routine['items'];
+
+    if (rawItems is List) {
+      for (final rawItem in rawItems) {
+        if (rawItem is! Map) continue;
+        final item = Map<String, dynamic>.from(rawItem);
+        final rawProduct = item['product'];
+        final product =
+            rawProduct is Map
+                ? Map<String, dynamic>.from(rawProduct)
+                : <String, dynamic>{};
+        final time = (item['time_of_day'] ?? item['time'] ?? '')
+            .toString()
+            .toUpperCase();
+        final notes = item['notes']?.toString().trim() ?? '';
+        final step = int.tryParse(
+          (item['step_order'] ?? item['step'] ?? '').toString(),
+        );
+
+        final scheduleStep = <String, dynamic>{
+          'step': step,
+          'time': time,
+          'product': product['name']?.toString() ?? 'Product',
+          'category': product['category']?.toString() ?? '',
+          'reminder': notes,
+        };
+
+        if (time == 'AM' || time == 'BOTH') morningSteps.add(scheduleStep);
+        if (time == 'PM' || time == 'BOTH') nightSteps.add(scheduleStep);
+        if (notes.isNotEmpty) {
+          reminders.addAll(
+            notes
+                .split(' | ')
+                .map((reminder) => reminder.trim())
+                .where((reminder) => reminder.isNotEmpty),
+          );
+        }
+      }
+    } else {
+      final rawMorning = routine['morning_steps'];
+      final rawNight = routine['night_steps'];
+      if (rawMorning is List) {
+        morningSteps.addAll(
+          rawMorning.whereType<Map>().map(
+            (step) => Map<String, dynamic>.from(step),
+          ),
+        );
+      }
+      if (rawNight is List) {
+        nightSteps.addAll(
+          rawNight.whereType<Map>().map(
+            (step) => Map<String, dynamic>.from(step),
+          ),
+        );
+      }
+      final rawReminders = routine['reminders'];
+      if (rawReminders is List) {
+        reminders.addAll(
+          rawReminders
+              .whereType<String>()
+              .map((reminder) => reminder.trim())
+              .where((reminder) => reminder.isNotEmpty),
+        );
+      }
+    }
+
+    return {
+      'morning_steps': morningSteps,
+      'night_steps': nightSteps,
+      'reminders': reminders.toList(),
+      'message':
+          morningSteps.isEmpty && nightSteps.isEmpty
+              ? 'Your active routine has no scheduled steps yet.'
+              : null,
+    };
+  }
+
+  String _scheduleErrorMessage(dynamic body, String fallback) {
+    if (body is! Map) return fallback;
+    final message = body['message']?.toString();
+    if (message == 'NO_SKIN_PROFILE') {
+      return 'Complete your skin profile before generating a schedule.';
+    }
+    if (message == 'NO_RECOMMENDATIONS') {
+      return 'No recommended products are available to build your schedule.';
+    }
+    return message == null || message.isEmpty ? fallback : message;
+  }
+
   Future<Map<String, dynamic>> _loadRoutinePayload() async {
-    // No category filter: a real routine needs cleanser/toner/serum/
-    // moisturizer/sunscreen, not just one category, so pull the system's
-    // full top recommendations and let the routine engine categorize and
-    // time each one (AM/PM, step order) below.
+    final activeRoutineResponse = await ApiService.getActiveRoutine();
+    if (activeRoutineResponse['statusCode'] == 200 &&
+        activeRoutineResponse['body'] is Map) {
+      return _scheduleDataFromRoutine(
+        Map<String, dynamic>.from(
+          activeRoutineResponse['body'] as Map<dynamic, dynamic>,
+        ),
+      );
+    }
+
+    if (activeRoutineResponse['statusCode'] != 404) {
+      return {
+        'morning_steps': <Map<String, dynamic>>[],
+        'night_steps': <Map<String, dynamic>>[],
+        'reminders': <String>[],
+        'message': _scheduleErrorMessage(
+          activeRoutineResponse['body'],
+          'Unable to load your routine. Check your connection and try again.',
+        ),
+      };
+    }
+
     final recommendationsResponse = await ApiService.getRecommendations(
       topN: 8,
     );
@@ -16,9 +129,10 @@ extension ScheduleScreenWidgets on _SkinIntelAppState {
         'morning_steps': <Map<String, dynamic>>[],
         'night_steps': <Map<String, dynamic>>[],
         'reminders': <String>[],
-        'message':
-            recommendationsResponse['body']?['message'] ??
-            'Unable to load your routine right now.',
+        'message': _scheduleErrorMessage(
+          recommendationsResponse['body'],
+          'Unable to load recommendations. Check your connection and try again.',
+        ),
       };
     }
 
@@ -50,20 +164,28 @@ extension ScheduleScreenWidgets on _SkinIntelAppState {
       recommendations: recommendations,
     );
 
-    if (routineResponse['statusCode'] == 200 &&
+    if (routineResponse['statusCode'] == 201 &&
         routineResponse['body'] is Map) {
-      return Map<String, dynamic>.from(
+      final responseBody = Map<String, dynamic>.from(
         routineResponse['body'] as Map<dynamic, dynamic>,
       );
+      final routine = responseBody['routine'];
+      if (routine is Map) {
+        return _scheduleDataFromRoutine(
+          Map<String, dynamic>.from(routine),
+        );
+      }
+      return _scheduleDataFromRoutine(responseBody);
     }
 
     return {
       'morning_steps': <Map<String, dynamic>>[],
       'night_steps': <Map<String, dynamic>>[],
       'reminders': <String>[],
-      'message':
-          routineResponse['body']?['message'] ??
-          'Unable to generate your routine right now.',
+      'message': _scheduleErrorMessage(
+        routineResponse['body'],
+        'Unable to generate your routine. Check the backend and try again.',
+      ),
     };
   }
 
@@ -81,7 +203,7 @@ extension ScheduleScreenWidgets on _SkinIntelAppState {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: FutureBuilder<Map<String, dynamic>>(
-        future: _loadRoutinePayload(),
+        future: _scheduleRoutineFuture ??= _loadRoutinePayload(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -279,13 +401,29 @@ extension ScheduleScreenWidgets on _SkinIntelAppState {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AppTheme.border),
                         ),
-                        child: Text(
-                          message,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: AppTheme.mutedForeground,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              message,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _scheduleRoutineFuture =
+                                      _loadRoutinePayload();
+                                });
+                              },
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ],
                           ),
-                        ),
                       )
                     else ...[
                       Column(

@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'services/api_service.dart';
+import 'services/dermatologist_service.dart';
 import 'utils/constants.dart';
 
 part 'screens/splash_screen.dart';
@@ -34,6 +36,7 @@ part 'screens/dashboard/products_screen.dart';
 part 'screens/dashboard/about_screen.dart';
 part 'screens/dashboard/skin_profile.dart';
 part 'screens/dashboard/appointments_screen.dart';
+part 'screens/appointments/appointments_screen.dart';
 part 'screens/dashboard/feedback_screen.dart';
 part 'screens/screen_helpers.dart';
 
@@ -112,6 +115,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
   final TextEditingController loginPasswordCtrl = TextEditingController();
   final TextEditingController profileFullNameCtrl = TextEditingController();
   final TextEditingController profileUsernameCtrl = TextEditingController();
+  final TextEditingController qAllergiesCtrl = TextEditingController();
   final TextEditingController forgotEmailCtrl = TextEditingController();
   final TextEditingController resetNewPasswordCtrl = TextEditingController();
   final TextEditingController resetConfirmPasswordCtrl =
@@ -132,6 +136,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
   String registeredEmail = '';
   String _resetToken = '';
   String _selectedScheduleDay = 'Monday';
+  Future<Map<String, dynamic>>? _scheduleRoutineFuture;
 
   @override
   void initState() {
@@ -642,6 +647,7 @@ class _SkinIntelAppState extends State<SkinIntelApp>
     loginPasswordCtrl.dispose();
     profileFullNameCtrl.dispose();
     profileUsernameCtrl.dispose();
+    qAllergiesCtrl.dispose();
     forgotEmailCtrl.dispose();
     resetNewPasswordCtrl.dispose();
     resetConfirmPasswordCtrl.dispose();

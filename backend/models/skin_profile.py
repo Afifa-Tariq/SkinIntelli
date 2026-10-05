@@ -1,8 +1,22 @@
 from datetime import datetime
 
+from sqlalchemy import TypeDecorator
 from sqlalchemy.dialects.mysql import LONGBLOB
+from sqlalchemy.types import LargeBinary
 
 from extensions import db
+
+
+class ImageBytesType(TypeDecorator):
+    """Use a true long binary column on MySQL while keeping SQLite tests portable."""
+
+    impl = LargeBinary
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "mysql":
+            return LONGBLOB()
+        return LargeBinary()
 
 
 class UserImage(db.Model):
@@ -15,10 +29,9 @@ class UserImage(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     content_type = db.Column(db.String(100), nullable=True)
     source = db.Column(db.String(20), nullable=False, default="upload")
-    # Plain LargeBinary compiles to MySQL BLOB (64KB max) with no length
-    # given, which is far too small for a real photo. LONGBLOB matches what
-    # the original hand-written schema intended (up to 4GB).
-    image_bytes = db.Column(LONGBLOB, nullable=False)
+    # MySQL stores photo data in a true long binary column; SQLite still needs
+    # a portable binary type for local test runs.
+    image_bytes = db.Column(ImageBytesType, nullable=False)
     image_size = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
