@@ -9,6 +9,7 @@ from flask import Flask, jsonify
 from werkzeug.exceptions import RequestEntityTooLarge
 from auth import auth_bp
 from config import DevelopmentConfig, ProductionConfig
+from dermatologists import dermatologists_bp
 from extensions import bcrypt, db, jwt, limiter, mail, cors
 from models import TokenBlocklist
 from recommendation_engine.recommendation import recommendation_bp
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(skin_profile_bp)
     app.register_blueprint(recommendation_bp)
     app.register_blueprint(routine_bp)
+    app.register_blueprint(dermatologists_bp)
 
     @app.route("/", methods=["GET"])
     def health_check():

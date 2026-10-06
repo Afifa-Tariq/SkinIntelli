@@ -176,3 +176,6 @@ Routes:
 - `GET /api/routine/active` - fetch the currently active routine for the authenticated user
 - `GET /api/routine/<routine_id>` - fetch a routine by id if it belongs to the user
 - `PATCH /api/routine/<routine_id>` - update the routine name, activate/deactivate it, add items, remove items, or replace items
+- `GET /api/dermatologists/nearby?latitude=<lat>&longitude=<lng>&radius=10000` - search nearby dermatologists ranked by Google Places prominence (JWT required)
+
+Set `GOOGLE_MAPS_API_KEY` in `backend/.env` to a Google Maps Platform key with Places API (New) enabled and billing configured. Keep this key on the backend; it is not embedded in the Flutter app. Results retain Google's relevance ranking.

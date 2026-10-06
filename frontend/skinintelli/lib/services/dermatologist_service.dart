@@ -2,34 +2,51 @@ import 'dart:convert';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:permission_handler/permission_handler.dart';
 
-const String _googleApiKey = 'YOUR_GOOGLE_API_KEY_HERE';
+import '../utils/constants.dart';
+import 'api_service.dart';
+
+class DermatologistServiceException implements Exception {
+  const DermatologistServiceException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class DermatologistService {
   static Future<bool> requestLocationPermission() async {
-    final status = await Permission.locationWhenInUse.request();
-    return status == PermissionStatus.granted;
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      throw const DermatologistServiceException(
+        'Turn on location services to find dermatologists near you.',
+      );
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw const DermatologistServiceException(
+        'Location permission is disabled. Enable it in your device settings and try again.',
+      );
+    }
+    return permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
   }
 
-  static Future<Position?> getCurrentPosition() async {
+  static Future<Position> getCurrentPosition() async {
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return null;
-      }
-      if (permission == LocationPermission.deniedForever) return null;
-
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 15),
       );
-    } catch (_) {
-      return null;
+    } catch (error) {
+      throw DermatologistServiceException(
+        'Unable to get your location. Check that location services are on and try again. ($error)',
+      );
     }
   }
 
@@ -38,91 +55,58 @@ class DermatologistService {
     required double lng,
     int radiusMeters = 10000,
   }) async {
-    final nearbyUrl = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
-      '?location=$lat,$lng'
-      '&radius=$radiusMeters'
-      '&type=doctor'
-      '&keyword=dermatologist+skin+clinic'
-      '&key=$_googleApiKey',
+    final uri = Uri.parse(
+      '${AppTheme.backendBaseUrl}/api/dermatologists/nearby',
+    ).replace(
+      queryParameters: {
+        'latitude': lat.toString(),
+        'longitude': lng.toString(),
+        'radius': radiusMeters.toString(),
+      },
     );
 
-    final nearbyResponse = await http.get(nearbyUrl);
-    if (nearbyResponse.statusCode != 200) return [];
-
-    final nearbyData = jsonDecode(nearbyResponse.body);
-    if (nearbyData['status'] != 'OK') return [];
-
-    final results = nearbyData['results'] as List? ?? const [];
-    final dermatologists = <Dermatologist>[];
-
-    for (final place in results.take(15)) {
-      if (place is! Map) continue;
-
-      final placeId = place['place_id']?.toString() ?? '';
-      if (placeId.isEmpty) continue;
-
-      final detail = await _getPlaceDetail(placeId);
-      dermatologists.add(
-        Dermatologist(
-          placeId: placeId,
-          name: place['name']?.toString() ?? 'Unknown',
-          address: place['vicinity']?.toString() ?? 'Address not available',
-          rating: (place['rating'] as num?)?.toDouble(),
-          totalRatings: place['user_ratings_total'] is int
-              ? place['user_ratings_total'] as int
-              : 0,
-          isOpenNow: place['opening_hours']?['open_now'] as bool?,
-          phoneNumber: detail['phone'] as String?,
-          website: detail['website'] as String?,
-          openingHours: (detail['hours'] as List?)?.cast<String>(),
-          lat: (place['geometry']?['location']?['lat'] as num?)?.toDouble() ?? 0.0,
-          lng: (place['geometry']?['location']?['lng'] as num?)?.toDouble() ?? 0.0,
-        ),
-      );
-    }
-
-    dermatologists.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
-    return dermatologists;
-  }
-
-  static Future<Map<String, dynamic>> _getPlaceDetail(String placeId) async {
+    late final http.Response response;
     try {
-      final detailUrl = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/details/json'
-        '?place_id=$placeId'
-        '&fields=formatted_phone_number,website,opening_hours'
-        '&key=$_googleApiKey',
+      response = await http
+          .get(uri, headers: ApiService.authHeaders)
+          .timeout(const Duration(seconds: 40));
+    } on Exception catch (error) {
+      throw DermatologistServiceException(
+        'Could not reach dermatologist search. Check your connection and ensure the backend is running. ($error)',
       );
-      final response = await http.get(detailUrl);
-      if (response.statusCode != 200) return {};
-
-      final data = jsonDecode(response.body);
-      final result = data['result'] ?? {};
-      return {
-        'phone': result['formatted_phone_number'],
-        'website': result['website'],
-        'hours': (result['opening_hours']?['weekday_text'] as List?)?.cast<String>(),
-      };
-    } catch (_) {
-      return {};
     }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      throw const DermatologistServiceException(
+        'The dermatologist service returned an invalid response.',
+      );
+    }
+
+    if (response.statusCode != 200) {
+      final message =
+          decoded is Map && decoded['message'] != null
+              ? decoded['message'].toString()
+              : 'Dermatologist search failed (${response.statusCode}).';
+      throw DermatologistServiceException(message);
+    }
+
+    if (decoded is! Map || decoded['results'] is! List) {
+      throw const DermatologistServiceException(
+        'The dermatologist service returned an invalid results list.',
+      );
+    }
+
+    return (decoded['results'] as List)
+        .whereType<Map>()
+        .map((place) => Dermatologist.fromJson(place))
+        .toList(growable: false);
   }
 }
 
 class Dermatologist {
-  final String placeId;
-  final String name;
-  final String address;
-  final double? rating;
-  final int totalRatings;
-  final bool? isOpenNow;
-  final String? phoneNumber;
-  final String? website;
-  final List<String>? openingHours;
-  final double lat;
-  final double lng;
-
   const Dermatologist({
     required this.placeId,
     required this.name,
@@ -136,4 +120,39 @@ class Dermatologist {
     required this.lat,
     required this.lng,
   });
+
+  factory Dermatologist.fromJson(Map<dynamic, dynamic> json) {
+    final rawHours = json['opening_hours'];
+    final rawRating = json['rating'];
+    final rawTotalRatings = json['total_ratings'];
+    final rawOpen = json['is_open_now'];
+    return Dermatologist(
+      placeId: json['place_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Dermatologist',
+      address: json['address']?.toString() ?? 'Address not available',
+      rating: rawRating is num ? rawRating.toDouble() : null,
+      totalRatings: rawTotalRatings is num ? rawTotalRatings.toInt() : 0,
+      isOpenNow: rawOpen is bool ? rawOpen : null,
+      phoneNumber: json['phone_number']?.toString(),
+      website: json['website']?.toString(),
+      openingHours:
+          rawHours is List
+              ? rawHours.whereType<String>().toList(growable: false)
+              : null,
+      lat: (json['latitude'] as num?)?.toDouble() ?? 0,
+      lng: (json['longitude'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final String placeId;
+  final String name;
+  final String address;
+  final double? rating;
+  final int totalRatings;
+  final bool? isOpenNow;
+  final String? phoneNumber;
+  final String? website;
+  final List<String>? openingHours;
+  final double lat;
+  final double lng;
 }

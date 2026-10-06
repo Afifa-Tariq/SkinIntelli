@@ -22,46 +22,59 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Future<void> _loadNearbyDermatologists() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _permissionDenied = false;
       _statusMessage = null;
+      _dermatologists = [];
     });
 
-    final hasPermission = await DermatologistService.requestLocationPermission();
-    if (!hasPermission) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _permissionDenied = true;
-        _statusMessage = 'Location access is required to search for nearby dermatologists.';
-      });
-      return;
-    }
-
-    final position = await DermatologistService.getCurrentPosition();
-    if (position == null) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _statusMessage = 'We could not access your current location.';
-      });
-      return;
-    }
-
-    final doctors = await DermatologistService.getNearbyDermatologists(
-      lat: position.latitude,
-      lng: position.longitude,
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      _dermatologists = doctors;
-      if (doctors.isEmpty) {
-        _statusMessage = 'No dermatologists were found near your location.';
+    try {
+      final hasPermission =
+          await DermatologistService.requestLocationPermission();
+      if (!hasPermission) {
+        if (!mounted) return;
+        setState(() {
+          _permissionDenied = true;
+          _statusMessage =
+              'Location access is required to search for nearby dermatologists.';
+        });
+        return;
       }
-    });
+
+      final position = await DermatologistService.getCurrentPosition();
+      final doctors = await DermatologistService.getNearbyDermatologists(
+        lat: position.latitude,
+        lng: position.longitude,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _dermatologists = doctors;
+        if (doctors.isEmpty) {
+          _statusMessage =
+              'No dermatologists were found near your location. Try again or increase your search radius.';
+        }
+      });
+    } on DermatologistServiceException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _statusMessage =
+            'Unable to load nearby dermatologists. Please try again. ($error)';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _openPhone(String phoneNumber) async {
@@ -80,15 +93,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<void> _openDirections(Dermatologist doctor) async {
     final query = Uri.encodeComponent('${doctor.name} ${doctor.address}');
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$query',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
-  Widget _doctorCard(Dermatologist doctor) {
+  Widget _doctorCard(Dermatologist doctor, int rank) {
     final hasWebsite = (doctor.website ?? '').trim().isNotEmpty;
     final hasPhone = (doctor.phoneNumber ?? '').trim().isNotEmpty;
+    final openingHours = doctor.openingHours ?? const <String>[];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -110,7 +126,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   color: AppTheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.local_hospital, color: AppTheme.primary),
+                child: const Icon(
+                  Icons.local_hospital,
+                  color: AppTheme.primary,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -143,20 +162,66 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              _chip(
+                icon: Icons.leaderboard_rounded,
+                label: 'Rank #$rank',
+                color: AppTheme.primary,
+              ),
               if (doctor.rating != null)
                 _chip(
                   icon: Icons.star_rounded,
-                  label: '${doctor.rating!.toStringAsFixed(1)} (${doctor.totalRatings})',
+                  label:
+                      '${doctor.rating!.toStringAsFixed(1)} (${doctor.totalRatings})',
                   color: const Color(0xFFFFC857),
                 ),
               if (doctor.isOpenNow != null)
                 _chip(
-                  icon: doctor.isOpenNow! ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                  icon:
+                      doctor.isOpenNow!
+                          ? Icons.check_circle_rounded
+                          : Icons.schedule_rounded,
                   label: doctor.isOpenNow! ? 'Open now' : 'Closed now',
-                  color: doctor.isOpenNow! ? const Color(0xFF4CAF50) : const Color(0xFFE57C23),
+                  color:
+                      doctor.isOpenNow!
+                          ? const Color(0xFF4CAF50)
+                          : const Color(0xFFE57C23),
                 ),
             ],
           ),
+          if (openingHours.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 8),
+                title: Text(
+                  'Opening hours',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.foreground,
+                  ),
+                ),
+                children:
+                    openingHours
+                        .map(
+                          (hour) => Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                hour,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+              ),
+            ),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -190,7 +255,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  Widget _chip({required IconData icon, required String label, required Color color}) {
+  Widget _chip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -223,12 +292,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         backgroundColor: AppTheme.background,
         elevation: 0,
         automaticallyImplyLeading: false,
-        leading: widget.onBack != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
-                onPressed: widget.onBack,
-              )
-            : null,
+        leading:
+            widget.onBack != null
+                ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
+                  onPressed: widget.onBack,
+                )
+                : null,
         title: Text(
           'Nearby Dermatologists',
           style: GoogleFonts.poppins(
@@ -241,78 +311,86 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadNearbyDermatologists,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _permissionDenied || (_statusMessage != null && _dermatologists.isEmpty)
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _permissionDenied ||
+                    (_statusMessage != null && _dermatologists.isEmpty)
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_off_rounded,
-                            size: 56,
-                            color: AppTheme.primary,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_off_rounded,
+                          size: 56,
+                          color: AppTheme.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _statusMessage ?? 'No dermatologists available.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            color: AppTheme.mutedForeground,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _statusMessage ?? 'No dermatologists available.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              color: AppTheme.mutedForeground,
+                        ),
+                        const SizedBox(height: 18),
+                        FilledButton.icon(
+                          onPressed: _loadNearbyDermatologists,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.card,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppTheme.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.location_on_rounded,
+                              color: AppTheme.primary,
                             ),
                           ),
-                          const SizedBox(height: 18),
-                          FilledButton.icon(
-                            onPressed: _loadNearbyDermatologists,
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: const Text('Retry'),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Results are based on your live location and Google Places.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.card,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Icon(Icons.location_on_rounded, color: AppTheme.primary),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Results are based on your live location and Google Places.',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: AppTheme.mutedForeground,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ..._dermatologists.map(_doctorCard),
-                    ],
-                  ),
+                    ...List.generate(
+                      _dermatologists.length,
+                      (index) => _doctorCard(_dermatologists[index], index + 1),
+                    ),
+                  ],
+                ),
       ),
     );
   }
